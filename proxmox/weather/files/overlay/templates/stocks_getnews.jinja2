@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed>
+    <list count="{{count}}" total="{{count}}">
+        {% for post in posts %}
+        <item id="{{post["published"]}}">
+            <id>{{post["published"]}}</id>
+            <title>{{post["title"]}}</title>
+            <timestamp>{{post["published"]}}</timestamp>
+            <link>{{post["link"]}}</link>
+        </item>
+        {% endfor %}
+    </list>
+</feed>

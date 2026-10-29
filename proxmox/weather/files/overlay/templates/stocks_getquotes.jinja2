@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+    <result type="{{type}}" timestamp="{{timestamp|int}}">
+        <list count="{{count}}" total="{{count}}">
+            {% for symbol in symbols %}
+            <quote>
+                <symbol>{{symbol.name}}</symbol>
+                <name>{{symbol.full_name}}</name>
+                <sname>{{symbol.name_short}}</sname>
+                <exchange>{{symbol.exchange}}</exchange>
+                <open>{{symbol.open_price}}</open>
+                <price>{{symbol.price}}</price>
+                <change>{{symbol.change}}</change>
+                <realtimechange>{{symbol.real_time_change}}</realtimechange>
+                <changepercent>{{symbol.change_percent}}</changepercent>
+                <marketcap>{{symbol.market_cap}}</marketcap>
+                <high>{{symbol.high}}</high>
+                <low>{{symbol.low}}</low>
+                <volume>{{symbol.volume}}</volume>
+                <averagedailyvolume>{{symbol.average_volume}}</averagedailyvolume>
+                <peratio>{{symbol.peratio}}</peratio>
+                <yearrange>{{symbol.yearrange}}</yearrange>
+                <dividendyield>{{symbol.dividend_yield}}</dividendyield>
+                <link>{{advert_link}}</link>
+                <status>0</status>
+            </quote>
+            {% endfor %}
+        </list>
+    </result>
+</response>
