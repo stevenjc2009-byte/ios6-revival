@@ -21,3 +21,5 @@ notify/.theos/
 notify/obj/
 logwatch/.theos/
 logwatch/obj/
+appstore/.theos/
+appstore/obj/
