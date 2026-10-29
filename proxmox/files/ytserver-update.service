@@ -13,10 +13,12 @@ RuntimeDirectory=ytserver-update
 
 # Runs as root inside the unprivileged container, so it is sandboxed too. It
 # may only write under /opt (the new tree and the previous tree it keeps for
-# rollback). The service restart goes over systemd's own unix socket.
+# rollback) and the two places it refreshes from the repo: itself in
+# /usr/local/sbin and the unit files. The service restart goes over systemd's
+# own unix socket.
 NoNewPrivileges=yes
 ProtectSystem=strict
-ReadWritePaths=/opt
+ReadWritePaths=/opt /usr/local/sbin /etc/systemd/system
 ProtectHome=yes
 PrivateTmp=yes
 PrivateDevices=yes

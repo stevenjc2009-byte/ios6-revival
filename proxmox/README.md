@@ -83,12 +83,21 @@ Re-run `verify-isolation.sh` after any edit.
 A systemd timer inside the container runs `ytserver-update` daily. It downloads the repo
 tarball, builds `server/` into a new tree with the newest yt-dlp, swaps it in, then tests
 `/healthz` plus one real search. If the test fails it swaps the old tree back. Skipped
-when nothing changed. Run it by hand or read the log:
+when nothing changed. It also refreshes itself and the three unit files from
+`proxmox/files/` (old unit files go back if the test fails). Run it by hand or read the log:
 
 ```bash
 pct exec <VMID> -- systemctl start ytserver-update
 pct exec <VMID> -- journalctl -u ytserver-update -e
 pct exec <VMID> -- ytserver-update --selftest
+```
+
+One-time refresh, for a container installed before the updater refreshed itself (its
+sandbox can only write `/opt`, so it cannot replace itself). This runs the new updater
+once outside the sandbox; the daily timer takes over from there:
+
+```bash
+pct exec <VMID> -- bash -c 'curl -fsSL https://raw.githubusercontent.com/stevenjc2009-byte/ios6-revival/main/proxmox/files/ytserver-update.sh -o /usr/local/sbin/ytserver-update && chmod 0755 /usr/local/sbin/ytserver-update && /usr/local/sbin/ytserver-update'
 ```
 
 Caveats: deno is pinned (v2.9.8, sha256-checked) and only changes when the installer is
