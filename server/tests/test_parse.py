@@ -85,3 +85,13 @@ def test_related_continuation_is_the_results_list_not_comments():
     related = [{"compactVideoRenderer": {}}] * 20 + [{"continuationItemRenderer": _cont("RELATED")}]
     for doc in ({"results": comments, "secondary": related}, {"secondary": related, "results": comments}):
         assert parse.continuation_token(doc) == "RELATED"
+
+
+def test_extract_keeps_document_order():
+    """Regression: results came out last-first on every page (search, uploads, playlists)."""
+    ids = [f"AAAAAAAAAA{i}" for i in range(5)]
+    doc = {"contents": [{"itemSectionRenderer": {"contents": [
+        {"videoRenderer": {"videoId": v, "title": {"runs": [{"text": v}]}}} for v in ids[:3]]}},
+        {"itemSectionRenderer": {"contents": [
+            {"videoRenderer": {"videoId": v, "title": {"runs": [{"text": v}]}}} for v in ids[3:]]}}]}
+    assert [v.id for v in parse.extract(doc).videos] == ids

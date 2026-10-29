@@ -20,17 +20,17 @@ _PLAYLIST_KEYS = ("playlistRenderer", "gridPlaylistRenderer", "compactPlaylistRe
 
 
 def walk(node: Any) -> Iterator[tuple[str, Any]]:
-    """Yield every (key, value) pair in the tree, depth first."""
+    """Yield every (key, value) pair in the tree, depth first, in document order
+    (a dict's own keys before anything nested in them)."""
     stack = [node]
     while stack:
         cur = stack.pop()
         if isinstance(cur, dict):
             for key, val in cur.items():
                 yield key, val
-                if isinstance(val, (dict, list)):
-                    stack.append(val)
+            stack.extend(v for v in reversed(list(cur.values())) if isinstance(v, (dict, list)))
         elif isinstance(cur, list):
-            stack.extend(v for v in cur if isinstance(v, (dict, list)))
+            stack.extend(v for v in reversed(cur) if isinstance(v, (dict, list)))
 
 
 def text_of(node: Any) -> str:
@@ -320,7 +320,6 @@ def extract(doc: Any, default_author: str = "") -> Page:
                 add("p", _playlist_from_lockup(val), page.playlists)
             elif ctype.endswith("CHANNEL"):
                 add("c", _channel_from_lockup(val), page.channels)
-    # the walk is depth-first from a stack, so restore document order
     return page
 
 
