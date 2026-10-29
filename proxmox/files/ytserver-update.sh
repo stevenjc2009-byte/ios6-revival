@@ -53,7 +53,7 @@ trap cleanup EXIT
 
 log "fetching ${URL}"
 curl -fsSL --proto '=https' --tlsv1.2 -m 300 -o "$WORK/src.tgz" "$URL"
-TOP=$(tar -tzf "$WORK/src.tgz" | head -1 | cut -d/ -f1)
+TOP=$(tar -tzf "$WORK/src.tgz" | sed -n 1p | cut -d/ -f1)   # not head: under systemd tar gets EPIPE and exits 2
 tar -xzf "$WORK/src.tgz" --no-same-owner -C "$WORK" "${TOP}/server"
 [[ -f $WORK/$TOP/server/requirements.txt ]] || { log "tarball has no server/requirements.txt"; exit 1; }
 

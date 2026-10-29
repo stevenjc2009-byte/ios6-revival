@@ -186,7 +186,7 @@ fw_diagnose() {
     pct config "$VMID" 2>&1 | grep -E '^(net0|features|unprivileged):'
     ip -br link 2>/dev/null | grep -E "(veth|fwbr|fwpr|fwln)${VMID}" || echo "no ${VMID} interfaces on the host"
     echo "iptables lines: $(iptables-save 2>/dev/null | grep -c "${VMID}i0")  nft lines: $(nft list ruleset 2>/dev/null | grep -cE "${VMID}i0|guest-${VMID}-")"
-    pve-firewall compile 2>&1 | grep -iE "error|warn|unable|parse|illegal|${VMID}\.fw" | head -20
+    pve-firewall compile 2>&1 | grep -iE "error|warn|unable|parse|illegal|${VMID}\.fw" | sed -n 1,20p
     journalctl -u pve-firewall -u proxmox-firewall -n 15 --no-pager 2>&1
     echo "---- end ----"
 }
