@@ -6,6 +6,7 @@ Brings the original YouTube app back to life on a jailbroken iPhone running iOS 
 |---|---|
 | [`server/`](server/) | Python server that speaks the old YouTube GData v2 API the app expects, and serves videos as iPhone 4–friendly MP4 (H.264/AAC, ≤360p). |
 | [`tweak/`](tweak/) | Theos tweak for the YouTube app that sends its API, thumbnail and sign-in traffic to your server. |
+| [`autoclose/`](autoclose/) | SpringBoard tweak: when you open an app and 5 or more are running, closes all the others (keeps the one you're on and the one playing audio). |
 | [`proxmox/`](proxmox/) | One-command installer that builds a locked-down Proxmox container for the server. |
 
 ## Install the server on Proxmox
@@ -21,3 +22,7 @@ The container is unprivileged and firewalled by the Proxmox host. Only the allow
 ## Install the tweak
 
 Install `tweak/packages/com.stevenjc.ios6revival.youtube_*.deb` on the phone with `dpkg -i`. Then set the server address in **Settings → YouTube Revival → Server**, for example `http://192.168.0.50:8080`.
+
+## Install Auto Close Apps
+
+Install `autoclose/packages/com.stevenjc.ios6revival.autoclose_*.deb` with `dpkg -i`, then respring. Change the limit in **Settings → Auto Close Apps**.

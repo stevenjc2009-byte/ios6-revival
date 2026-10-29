@@ -12,3 +12,7 @@ tweak/obj/
 # Agent scratch files left in the project root
 /tweak-agent-logic.h*
 /.
+
+# Theos build output for autoclose (the finished .deb in autoclose/packages/ is kept)
+autoclose/.theos/
+autoclose/obj/

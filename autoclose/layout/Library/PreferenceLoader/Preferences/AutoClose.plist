@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>entry</key>
+	<dict>
+		<key>cell</key>
+		<string>PSLinkCell</string>
+		<key>label</key>
+		<string>Auto Close Apps</string>
+	</dict>
+	<key>title</key>
+	<string>Auto Close Apps</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>When you open an app and this many apps are running, all the others close. The app you are on and the one playing music are kept.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Enabled</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.autoclose</string>
+			<key>key</key>
+			<string>Enabled</string>
+			<key>default</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>label</key>
+			<string>Apps open limit</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.autoclose</string>
+			<key>key</key>
+			<string>Limit</string>
+			<key>default</key>
+			<string>5</string>
+			<key>keyboard</key>
+			<string>numbers</string>
+		</dict>
+	</array>
+</dict>
+</plist>
