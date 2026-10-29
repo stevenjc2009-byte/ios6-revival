@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>entry</key>
+	<dict>
+		<key>cell</key>
+		<string>PSLinkCell</string>
+		<key>label</key>
+		<string>iOS Updates</string>
+	</dict>
+	<key>title</key>
+	<string>iOS Updates</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Off: Settings never offers iOS 7. Updating to iOS 7 removes the jailbreak and every tweak, and you cannot go back to iOS 6. On: Software Update works normally again.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Allow iOS updates</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.updateblock</string>
+			<key>key</key>
+			<string>AllowUpdates</string>
+			<key>default</key>
+			<false/>
+		</dict>
+	</array>
+</dict>
+</plist>

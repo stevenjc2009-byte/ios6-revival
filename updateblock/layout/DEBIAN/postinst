@@ -1,0 +1,11 @@
+#!/bin/bash
+# Block the update check now (the switch starts off), then follow the switch from here on (and recheck every
+# 30 minutes in case something else rewrites /etc/hosts). launchd only watches a file that exists, so create it.
+P=/var/mobile/Library/Preferences/com.stevenjc.ios6revival.updateblock.plist
+[ -f "$P" ] || { printf '<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>AllowUpdates</key><false/></dict></plist>
+' > "$P"; chown mobile:mobile "$P"; }
+launchctl unload /Library/LaunchDaemons/com.stevenjc.ios6revival.updateblock.plist 2>/dev/null
+launchctl load /Library/LaunchDaemons/com.stevenjc.ios6revival.updateblock.plist 2>/dev/null
+/usr/bin/revupdateblock
+exit 0

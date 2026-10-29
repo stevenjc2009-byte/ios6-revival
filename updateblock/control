@@ -1,0 +1,9 @@
+Package: com.stevenjc.ios6revival.updateblock
+Name: iOS Updates
+Version: 0.1.1
+Architecture: iphoneos-arm
+Description: Stops Settings from offering iOS 7, which would remove the jailbreak. Settings > iOS Updates has a switch to allow updates again.
+Maintainer: steve
+Author: steve
+Section: Tweaks
+Depends: preferenceloader

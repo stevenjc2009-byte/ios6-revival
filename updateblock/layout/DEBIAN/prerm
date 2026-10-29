@@ -1,0 +1,5 @@
+#!/bin/bash
+# Stop following the switch and take the block out of /etc/hosts.
+launchctl unload /Library/LaunchDaemons/com.stevenjc.ios6revival.updateblock.plist 2>/dev/null
+/usr/bin/revupdateblock remove
+exit 0
