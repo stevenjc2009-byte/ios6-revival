@@ -116,16 +116,16 @@ EOF
 
 # Host uses the nftables backend (proxmox-firewall) when host.fw sets "nftables: 1".
 fw_nft_backend() {
-    awk '/^\[/{s=($0=="[OPTIONS]")} s&&/^nftables:/{print $2}' "${YTS_HOST_FW:-/etc/pve/local/host.fw}" 2>/dev/null | grep -q '^1$'
+    awk '/^\[/{s=($0=="[OPTIONS]")} s&&/^nftables:/{print $2}' "${YTS_HOST_FW:-/etc/pve/local/host.fw}" 2>/dev/null | grep '^1$' >/dev/null
 }
 
 # iptables backend names guest chains after the veth (veth109i0-IN); the
 # nftables backend names them guest-109-in / guest-109-out.
 fw_applied() {
     local pat="veth${VMID}i0|guest-${VMID}-(in|out)"
-    iptables-save 2>/dev/null | grep -qE "$pat" && return 0
-    command -v iptables-legacy-save >/dev/null && iptables-legacy-save 2>/dev/null | grep -qE "$pat" && return 0
-    nft list ruleset 2>/dev/null | grep -qE "$pat" && return 0
+    iptables-save 2>/dev/null | grep -E "$pat" >/dev/null && return 0
+    command -v iptables-legacy-save >/dev/null && iptables-legacy-save 2>/dev/null | grep -E "$pat" >/dev/null && return 0
+    nft list ruleset 2>/dev/null | grep -E "$pat" >/dev/null && return 0
     return 1
 }
 

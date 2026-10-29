@@ -20,7 +20,7 @@ if [[ -z $VMID ]]; then
     echo "Containers tagged ios6-revival:"
     FOUND=()
     while read -r id; do
-        pct config "$id" 2>/dev/null | grep -q '^tags:.*ios6-revival' && { FOUND+=("$id"); echo "  $id  $(pct config "$id" | sed -n 's/^hostname: //p')"; }
+        pct config "$id" 2>/dev/null | grep '^tags:.*ios6-revival' >/dev/null && { FOUND+=("$id"); echo "  $id  $(pct config "$id" | sed -n 's/^hostname: //p')"; }
     done < <(pct list | awk 'NR>1 {print $1}')
     (( ${#FOUND[@]} )) || die "none found; pass the VMID explicitly"
     read -r -p "VMID to destroy: " VMID
@@ -28,7 +28,7 @@ fi
 [[ $VMID =~ ^[0-9]+$ ]] || die "VMID must be a number"
 pct config "$VMID" >/dev/null 2>&1 || die "no container $VMID on this node"
 
-if ! pct config "$VMID" | grep -q '^tags:.*ios6-revival'; then
+if ! pct config "$VMID" | grep '^tags:.*ios6-revival' >/dev/null; then
     [[ ${YTS_FORCE:-0} == 1 ]] || die "CT $VMID is not tagged ios6-revival, so it was not made by this installer. Set YTS_FORCE=1 if you really mean it."
 fi
 

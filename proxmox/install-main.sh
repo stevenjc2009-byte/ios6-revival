@@ -152,7 +152,7 @@ else
     pveam update >/dev/null 2>&1 || warn "pveam update failed; using the cached list"
     TNAME=$(pveam available --section system | awk '$2 ~ /^debian-12-standard/ {print $2}' | sort -V | tail -1)
     [[ -n $TNAME ]] || die "no debian-12-standard template available"
-    pveam list "$TSTORE" | awk '{print $1}' | grep -q "/${TNAME}\$" || pveam download "$TSTORE" "$TNAME"
+    pveam list "$TSTORE" | awk '{print $1}' | grep "/${TNAME}\$" >/dev/null || pveam download "$TSTORE" "$TNAME"
     TEMPLATE="${TSTORE}:vztmpl/${TNAME}"
 fi
 
