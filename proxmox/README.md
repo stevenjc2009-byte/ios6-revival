@@ -38,7 +38,7 @@ this reaches nothing else.
 |---|---|---|
 | Proxmox host firewall `/etc/pve/firewall/<VMID>.fw` | On the host. Root in the container cannot change it. | Inbound: everything except tcp/8080 from your listed clients. Outbound: everything except gateway DNS and tcp 80/443 to the public internet. The LAN (10/8, 172.16/12, 192.168/16), Tailscale/CGNAT, link-local, multicast, the Proxmox host's own addresses and all IPv6 are dropped. |
 | `ipfilter` + `macfilter` | Same file | Pretending to be another IP or MAC (e.g. the router) to slip past the rules. |
-| Unprivileged LXC, `nesting=0` | Container config | Container root is an ordinary unprivileged user on the host. No keyctl, fuse or device nodes. |
+| Unprivileged LXC, `nesting=1` | Container config | Container root is an ordinary unprivileged user on the host. No keyctl, fuse or device nodes. Nesting is on because Debian 12 systemd needs it for the services' sandboxing (PrivateTmp, ProtectSystem); it exposes a little more of the host's /proc and /sys. |
 | No way in | Container | No sshd, no mail, no rpc/nfs. Root password locked. You get in only with `pct enter` from the host. |
 | In-container nftables | `/etc/nftables.conf` | Same rules as the host, second copy. **Defence in depth only**: root inside could flush it. The host firewall is the real wall, and `verify-isolation.sh` flushes this layer on purpose to prove the host still blocks. |
 | systemd sandbox | `ytserver.service` | The server runs as `ytserver` with no capabilities, read-only filesystem except its cache, private `/tmp`, IPv4 and unix sockets only, a syscall filter, 768 MB memory and 128 task limits. `MemoryDenyWriteExecute` is deliberately off because deno is a JIT (tested: on, deno crashes). |

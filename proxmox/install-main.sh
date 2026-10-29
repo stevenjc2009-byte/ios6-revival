@@ -131,7 +131,7 @@ mapfile -t HOST_IPS < <(ip -4 -o addr show scope global 2>/dev/null | awk '{spli
 cat <<EOF
 
  PLAN
-   container : CT ${VMID} "${CT_NAME}", unprivileged, nesting off, ${CORES} core / ${RAM} MB / swap 512 MB / ${DISK} GB on ${STORAGE}
+   container : CT ${VMID} "${CT_NAME}", unprivileged, nesting on (systemd sandboxing needs it), ${CORES} core / ${RAM} MB / swap 512 MB / ${DISK} GB on ${STORAGE}
    network   : ${BRIDGE}, ${IPCFG}, gateway/DNS ${GW}, host firewall ON (${HERE##*/}/fw.sh rules)
    clients   : ${ALLOWED[*]} -> tcp/8080 only; everything else inbound dropped
    egress    : DNS to ${GW}; internet tcp ${EGRESS_PORTS}; LAN, Tailscale, host (${HOST_IPS[*]}) blocked
@@ -161,7 +161,7 @@ if [[ $DHCP -eq 1 ]]; then NETCONF="name=eth0,bridge=${BRIDGE},ip=dhcp,firewall=
 else NETCONF="name=eth0,bridge=${BRIDGE},ip=${IPCFG},gw=${GW},firewall=1,type=veth"; fi
 say "creating container ${VMID}"
 run pct create "$VMID" "$TEMPLATE" \
-    --hostname "$CT_NAME" --unprivileged 1 --features nesting=0 \
+    --hostname "$CT_NAME" --unprivileged 1 --features nesting=1 \
     --cores "$CORES" --memory "$RAM" --swap 512 --rootfs "${STORAGE}:${DISK}" \
     --net0 "$NETCONF" --nameserver "$GW" --onboot 1 --start 0 \
     --tags ios6-revival --description "ios6-revival ytserver (created by proxmox/install.sh; firewall: /etc/pve/firewall/${VMID}.fw)"
