@@ -8,6 +8,7 @@
 #   YTS_ALLOWED (comma list) YTS_RAM YTS_CORES YTS_DISK YTS_TEMPLATE_STORAGE
 #   YTS_NONINTERACTIVE=1   no whiptail; unanswered questions take the defaults
 #   YTS_ACCEPT_CLUSTER_FW=1  non-interactive consent to enabling the datacenter firewall
+#   YTS_ACCEPT_HOST_FORWARD=1  non-interactive consent to the Docker FORWARD fix (fw.sh)
 #   YTS_DRY_RUN=1          print the .fw file and the pct commands, change nothing
 set -Eeuo pipefail
 
@@ -143,6 +144,7 @@ fi
 
 # ------------------------------------------------------------- datacenter firewall
 cluster_fw_ensure
+host_forward_ensure
 
 # ------------------------------------------------------------- template
 say "Debian 12 template"

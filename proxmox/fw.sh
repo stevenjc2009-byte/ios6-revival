@@ -114,6 +114,47 @@ EOF
     say "datacenter firewall enabled ($CLUSTER_FW)"
 }
 
+# Docker on the host sets the iptables FORWARD policy to DROP. pve-firewall marks
+# allowed guest packets and returns, relying on policy ACCEPT, so with Docker
+# every firewalled guest (this one included) loses its network. One rule appended
+# after Docker's and PVE's chains accepts bridged frames neither of them dropped;
+# routed (Docker) traffic is untouched. A oneshot unit re-adds it at boot.
+FWD_UNIT=${YTS_FWD_UNIT:-/etc/systemd/system/vmbr0-forward.service}
+FWD_RULE=(FORWARD -m physdev --physdev-is-bridged -j ACCEPT)
+host_forward_ensure() {
+    iptables -S FORWARD 2>/dev/null | grep -x -- '-P FORWARD DROP' >/dev/null || return 0
+    if iptables -C "${FWD_RULE[@]}" 2>/dev/null && [[ -f $FWD_UNIT ]]; then
+        say "host FORWARD policy is DROP (Docker) -- bridged-traffic rule already in place"; return 0
+    fi
+    cat <<EOF
+
+ HOST FORWARD CHANGE (needed: Docker on this host drops forwarded traffic)
+   found   : iptables FORWARD policy DROP (Docker sets this)
+   change  : iptables -A ${FWD_RULE[*]}
+             plus $FWD_UNIT to re-add it at boot
+   effect  : bridged guest traffic that the Proxmox and Docker rules allow gets through again.
+             Without it this container (and any other firewalled guest) has no network.
+   untouched: Docker's own chains, routed traffic, every .fw file.
+EOF
+    if [[ $DRY_RUN -eq 1 ]]; then echo " (dry run: nothing changed)"; return 0; fi
+    confirm_yes "YTS_ACCEPT_HOST_FORWARD"
+    iptables -C "${FWD_RULE[@]}" 2>/dev/null || iptables -A "${FWD_RULE[@]}"
+    cat > "$FWD_UNIT" <<EOF
+[Unit]
+Description=Let bridged guest traffic past Docker's FORWARD DROP policy (ios6-revival installer)
+After=docker.service pve-firewall.service
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'iptables -C ${FWD_RULE[*]} 2>/dev/null || iptables -A ${FWD_RULE[*]}'
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable "$(basename "$FWD_UNIT")" >/dev/null 2>&1
+    say "bridged-traffic rule added; $FWD_UNIT keeps it after reboot"
+}
+
 # Host uses the nftables backend (proxmox-firewall) when host.fw sets "nftables: 1".
 fw_nft_backend() {
     awk '/^\[/{s=($0=="[OPTIONS]")} s&&/^nftables:/{print $2}' "${YTS_HOST_FW:-/etc/pve/local/host.fw}" 2>/dev/null | grep '^1$' >/dev/null

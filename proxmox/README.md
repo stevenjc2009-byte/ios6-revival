@@ -16,8 +16,15 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/stevenjc2009-byte/ios6-r
 It asks for a container ID, IP, gateway, the iPhone's IP (the only machine allowed in) and
 storage. Everything has a default. For no prompts, set `YTS_*` variables first
 (`YTS_VMID`, `YTS_IP`, `YTS_GW`, `YTS_ALLOWED`, `YTS_STORAGE`, `YTS_BRIDGE`,
-`YTS_NONINTERACTIVE=1`, `YTS_ACCEPT_CLUSTER_FW=1`). To rehearse without changing anything:
-`YTS_DRY_RUN=1`.
+`YTS_NONINTERACTIVE=1`, `YTS_ACCEPT_CLUSTER_FW=1`, `YTS_ACCEPT_HOST_FORWARD=1`). To rehearse
+without changing anything: `YTS_DRY_RUN=1`.
+
+**Docker on the Proxmox host:** Docker sets the iptables FORWARD policy to DROP, which cuts
+every firewalled guest off the network. The installer spots this, explains, asks, then appends
+`iptables -A FORWARD -m physdev --physdev-is-bridged -j ACCEPT` (after Docker's and Proxmox's
+own chains, so whatever they drop stays dropped) and enables
+`/etc/systemd/system/vmbr0-forward.service` to re-add it at boot. `uninstall.sh` leaves it in
+place, because other guests need it too.
 
 At the end it prints the container IP, the health URL and the `ServerURL` to put in the
 tweak. Then prove the walls:
