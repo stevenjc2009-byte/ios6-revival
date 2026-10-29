@@ -1,0 +1,9 @@
+Package: com.stevenjc.ios6revival.notify
+Name: Revival Notify
+Version: 0.1.2
+Architecture: iphoneos-arm
+Description: Shows a banner when an app is installed or updated, and lets scripts show banners with the revnotify command.
+Maintainer: steve
+Author: steve
+Section: Tweaks
+Depends: mobilesubstrate

@@ -1,0 +1,6 @@
+#!/bin/bash
+# Stop the hourly check and put the original log settings back.
+launchctl unload /Library/LaunchDaemons/com.stevenjc.ios6revival.logwatch.plist 2>/dev/null
+[ -f /etc/syslog.conf.ios6revival-bak ] && mv -f /etc/syslog.conf.ios6revival-bak /etc/syslog.conf
+[ -f /var/run/syslog.pid ] && kill -HUP "$(cat /var/run/syslog.pid)"
+exit 0

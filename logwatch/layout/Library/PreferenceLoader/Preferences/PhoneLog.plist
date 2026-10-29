@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>entry</key>
+	<dict>
+		<key>cell</key>
+		<string>PSLinkCell</string>
+		<key>label</key>
+		<string>Phone Log</string>
+	</dict>
+	<key>title</key>
+	<string>Phone Log</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Checked once an hour. When the system log reaches this size you get a banner, and the log is deleted this many days later. Upload it before then if you need it.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>label</key>
+			<string>Warn at size (MB)</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.logwatch</string>
+			<key>key</key>
+			<string>SizeMB</string>
+			<key>default</key>
+			<string>90</string>
+			<key>keyboard</key>
+			<string>numbers</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>label</key>
+			<string>Days until deletion</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.logwatch</string>
+			<key>key</key>
+			<string>Days</string>
+			<key>default</key>
+			<string>2</string>
+			<key>keyboard</key>
+			<string>numbers</string>
+		</dict>
+	</array>
+</dict>
+</plist>

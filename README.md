@@ -7,6 +7,8 @@ Brings the original YouTube app back to life on a jailbroken iPhone running iOS 
 | [`server/`](server/) | Python server that speaks the old YouTube GData v2 API the app expects, and serves videos as iPhone 4–friendly MP4 (H.264/AAC, ≤360p). |
 | [`tweak/`](tweak/) | Theos tweak for the YouTube app that sends its API, thumbnail and sign-in traffic to your server. |
 | [`autoclose/`](autoclose/) | SpringBoard tweak: when you open an app and 5 or more are running, closes all the others (keeps the one you're on and the one playing audio). |
+| [`notify/`](notify/) | SpringBoard tweak: a banner when an app is installed or updated, plus the `revnotify "Title" "Message"` command for scripts. |
+| [`logwatch/`](logwatch/) | Phone Log: logs only warnings, errors and crashes; hourly size check, banner at the limit, deletes the log after the set days. |
 | [`proxmox/`](proxmox/) | One-command installer that builds a locked-down Proxmox container for the server. |
 
 ## Install the server on Proxmox
@@ -26,3 +28,7 @@ Install `tweak/packages/com.stevenjc.ios6revival.youtube_*.deb` on the phone wit
 ## Install Auto Close Apps
 
 Install `autoclose/packages/com.stevenjc.ios6revival.autoclose_*.deb` with `dpkg -i`, then respring. Change the limit in **Settings → Auto Close Apps**.
+
+## Install Revival Notify and Phone Log
+
+Install `notify/packages/com.stevenjc.ios6revival.notify_*.deb` first, then `logwatch/packages/com.stevenjc.ios6revival.logwatch_*.deb`, with `dpkg -i`, then respring. Set the warning size and days in **Settings → Phone Log**. `revlogwatch status` shows the current size and deletion time. Removing Phone Log puts the original `/etc/syslog.conf` back.

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Log only warnings, errors and crashes (was every message), then start the hourly check.
+[ -f /etc/syslog.conf.ios6revival-bak ] || cp -p /etc/syslog.conf /etc/syslog.conf.ios6revival-bak
+echo "*.warning /var/log/syslog" > /etc/syslog.conf
+[ -f /var/run/syslog.pid ] && kill -HUP "$(cat /var/run/syslog.pid)"
+launchctl load /Library/LaunchDaemons/com.stevenjc.ios6revival.logwatch.plist 2>/dev/null
+exit 0

@@ -1,0 +1,9 @@
+Package: com.stevenjc.ios6revival.logwatch
+Name: Phone Log
+Version: 0.1.0
+Architecture: iphoneos-arm
+Description: Logs only warnings, errors and crashes. Once an hour checks the log size; at the limit in Settings shows a banner, then deletes the log after the set number of days.
+Maintainer: steve
+Author: steve
+Section: Tweaks
+Depends: com.stevenjc.ios6revival.notify, preferenceloader
