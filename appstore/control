@@ -1,8 +1,8 @@
 Package: com.stevenjc.ios6revival.appstore
 Name: Revival App Store
-Version: 0.0.3
+Version: 0.0.4
 Architecture: iphoneos-arm
-Description: App Store revival: removes the store's EV-certificate demand, accepts a store bag whose broken signature fails only when it came over verified https from apple.com (normal iOS trust checks still apply), and logs every App Store request to /var/mobile/Library/ios6revival/appstore-log.txt.
+Description: App Store revival: removes the store's EV-certificate demand, accepts a store bag whose broken signature fails only when it came over verified https from apple.com (normal iOS trust checks still apply), fixes Apple ID sign-in (trailing slash on the sign-in URL), and logs every App Store request to /var/mobile/Library/ios6revival/appstore-log.txt.
 Maintainer: steve
 Author: steve
 Section: Tweaks

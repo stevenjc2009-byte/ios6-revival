@@ -9,7 +9,7 @@ include $(THEOS)/makefiles/common.mk
 AS_CFLAGS = -fno-objc-arc -fno-objc-convert-messages-to-runtime-calls -Wall -Wno-unused-function -Wno-deprecated-module-dot-map
 
 TWEAK_NAME = RevivalAppStore
-RevivalAppStore_FILES = Tweak.x ASLog.m ASDelegates.m ASBag.m
+RevivalAppStore_FILES = Tweak.x ASLog.m ASDelegates.m ASBag.m ASAuth.x
 RevivalAppStore_FRAMEWORKS = Foundation Security
 RevivalAppStore_CFLAGS = $(AS_CFLAGS)
 

@@ -17,3 +17,8 @@ void ASBagNoteFetch(NSURL *finalURL, NSString *trustDecision, NSData *body);
 BOOL ASBagAcceptUnsigned(id bag, NSDictionary *dict, NSError *why);
 void ASBagCheckSignedPath(id bag, NSDictionary *dict);
 void ASBagSelfTest(void);
+
+// ASAuth.x: sign-in URL fix (trailing slash on the bag's authenticateAccount) and buy-refusal logging.
+NSString *ASAuthSlashedURL(NSString *s);
+void ASAuthNoteResponse(NSURL *url, NSData *body);
+void ASAuthInit(void);

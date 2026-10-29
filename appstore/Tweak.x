@@ -184,6 +184,7 @@ void ASOnFinish(NSURLConnection *c) {
     NSURL *url = [st objectForKey:@"url"] ?: ASConnURL(c);
     if (bag && ASIsBagURL(url)) ASLog(@"BAGSAVE", @"%@ (%lu bytes)", ASSaveBag(bag, ASConnURL(c)), (unsigned long)[bag length]);
     if (bag) ASBagNoteFetch(url, [st objectForKey:@"trust"], bag);
+    if (bag) ASAuthNoteResponse(url, bag);
     [st removeObjectForKey:@"bag"];
 }
 
@@ -371,9 +372,10 @@ static int asEVLogs;   // first few calls only, the getter runs on every request
                           @"ISOperation", @"ISLoadURLBagOperation", @"ISURLBag", @"ISCertificate", @"SSURLBag", @"SSURLRequestProperties", @"SSMutableURLRequestProperties", nil];
         NSMutableArray *missing = [NSMutableArray array];
         for (NSString *n in names) if (!NSClassFromString(n)) [missing addObject:n];
-        ASLog(@"LOAD", @"logger 0.0.3 loaded; missing classes: %@", [missing count] ? [missing componentsJoinedByString:@","] : @"none");
+        ASLog(@"LOAD", @"logger 0.0.4 loaded; missing classes: %@", [missing count] ? [missing componentsJoinedByString:@","] : @"none");
         %init;
         ASDelegatesInit();
         ASBagSelfTest();
+        ASAuthInit();
     }
 }
