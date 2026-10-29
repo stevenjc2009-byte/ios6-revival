@@ -1,7 +1,0 @@
-# Pinned upstream: https://github.com/simonrob/email-oauth2-proxy (Apache-2.0)
-# Release tag 2026-07-03 (PyPI emailproxy 2026.7.3). Only emailproxy.py is used.
-# To upgrade: review the upstream diff, then change all three lines together
-# (sha256 = of emailproxy.py exactly as served by raw.githubusercontent.com at that commit).
-MAILP_PROXY_VERSION=2026-07-03
-MAILP_PROXY_COMMIT=6599460ef7ea99a0ca9515d2457d1666cccb965a
-MAILP_PROXY_SHA256=c0ca8a55d05012c737728e8f9d886ad30a6f4d85a31efd5c900afc203d370fc4
