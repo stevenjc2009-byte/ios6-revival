@@ -33,7 +33,7 @@ die() { printf '  \033[1;31mxx\033[0m %s\n' "$*" >&2; exit 1; }
 
 # ---------------------------------------------------------------- packages
 say "apt update + full-upgrade"
-apt-get update -qq || die "apt-get update failed (DNS or egress?)"
+apt-get update -qq --error-on=any || die "apt-get update failed (DNS or egress?)"
 apt-get full-upgrade -y -qq -o Dpkg::Options::=--force-confold >/dev/null
 say "installing packages"
 apt-get install -y -qq --no-install-recommends \
