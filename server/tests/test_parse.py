@@ -57,3 +57,31 @@ def test_garbage_documents_yield_empty_pages():
     for doc in ({}, [], None, {"contents": "x"}, {"a": [1, 2, {"videoRenderer": {"videoId": "bad"}}]}):
         page = parse.extract(doc)
         assert not (page.videos or page.channels or page.playlists)
+
+
+def _cont(token):
+    return {"continuationEndpoint": {"continuationCommand": {"token": token}}}
+
+
+def test_continuation_is_the_load_more_token_not_a_filter_chip():
+    """Regression: the search header's chips (Shorts, Videos, ...) carry
+    continuation tokens too; following one looped pages after ~45 results."""
+    header = {"chipCloudRenderer": {"chips": [
+        {"chipCloudChipRenderer": {"navigationEndpoint": {"continuationCommand": {"token": "CHIP1"}}}},
+        {"chipCloudChipRenderer": {"navigationEndpoint": {"continuationCommand": {"token": "CHIP2"}}}}]}}
+    contents = [{"itemSectionRenderer": {}}, {"continuationItemRenderer": _cont("MORE")}]
+    assert parse.continuation_token({"header": header, "contents": contents}) == "MORE"
+    assert parse.continuation_token({"contents": contents, "header": header}) == "MORE"
+
+
+def test_continuation_falls_back_to_any_token():
+    assert parse.continuation_token({"a": [{"x": _cont("ONLY")}]}) == "ONLY"
+    assert parse.continuation_token({"a": 1}) == ""
+
+
+def test_related_continuation_is_the_results_list_not_comments():
+    """Regression: the watch page has a comments 'load more' first; related stopped at 20."""
+    comments = [{"continuationItemRenderer": _cont("COMMENTS")}]
+    related = [{"compactVideoRenderer": {}}] * 20 + [{"continuationItemRenderer": _cont("RELATED")}]
+    for doc in ({"results": comments, "secondary": related}, {"secondary": related, "results": comments}):
+        assert parse.continuation_token(doc) == "RELATED"

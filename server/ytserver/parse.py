@@ -260,14 +260,37 @@ def _channel_from_lockup(lockup: dict) -> Channel | None:
                    avatar=avatar, handle=next((t for t in texts if t.startswith("@")), ""))
 
 
-def continuation_token(doc: Any) -> str:
-    """First continuation token in the document ('' when there is none)."""
-    for key, val in walk(doc):
+def _command_token(node: Any) -> str:
+    for key, val in walk(node):
         if key == "continuationCommand" and isinstance(val, dict):
             token = val.get("token")
             if isinstance(token, str) and token:
                 return token
     return ""
+
+
+def continuation_token(doc: Any) -> str:
+    """The list's "load more" token ('' when there is none).
+
+    Filter chips (Shorts, Videos, ...) and the comments section carry
+    continuation tokens too; following one of those loops between filtered
+    pages or fetches comments. The real one is the continuationItemRenderer
+    ending the longest list, which is the list of results itself.
+    """
+    best, best_len = "", 0
+    stack = [doc]
+    while stack:
+        cur = stack.pop()
+        if isinstance(cur, dict):
+            stack.extend(v for v in cur.values() if isinstance(v, (dict, list)))
+        elif isinstance(cur, list):
+            stack.extend(v for v in cur if isinstance(v, (dict, list)))
+            last = cur[-1] if cur else None
+            if len(cur) > best_len and isinstance(last, dict) and "continuationItemRenderer" in last:
+                token = _command_token(last)
+                if token:
+                    best, best_len = token, len(cur)
+    return best or _command_token(doc)
 
 
 def extract(doc: Any, default_author: str = "") -> Page:

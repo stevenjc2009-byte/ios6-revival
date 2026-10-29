@@ -48,7 +48,7 @@ def search_params(sort: str = "", date: str = "", duration: str = "") -> str:
 
 CHANNEL_VIDEOS_PARAMS = "EgZ2aWRlb3PyBgQKAjoA"
 CHANNEL_PLAYLISTS_PARAMS = "EglwbGF5bGlzdHPyBgQKAkIA"
-MAX_PAGES = 6
+MAX_PAGES = 15  # InnerTube pages (~20 items each) one feed may follow
 
 
 class UpstreamError(RuntimeError):
@@ -111,7 +111,7 @@ class InnerTube:
                 _merge(merged, page)
                 if not _count(page):
                     state["token"] = ""
-            return merged, state["token"] != ""
+            return merged, state["token"] != "" and state["n"] < MAX_PAGES
 
     # ---- high level ------------------------------------------------------
     def search(self, query: str, params: str, want: int) -> tuple[Page, bool]:
