@@ -1,0 +1,5 @@
+#!/bin/bash
+# Restart both so the removed hooks are gone straight away, not at the next reboot.
+launchctl stop com.apple.itunesstored 2>/dev/null
+killall AppStore 2>/dev/null
+exit 0

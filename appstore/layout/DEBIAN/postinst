@@ -1,0 +1,6 @@
+#!/bin/bash
+# itunesstored and the App Store keep running the old hooks until they restart, so restart both now.
+# launchd starts itunesstored again the next time something asks for it.
+launchctl stop com.apple.itunesstored 2>/dev/null
+killall AppStore 2>/dev/null
+exit 0

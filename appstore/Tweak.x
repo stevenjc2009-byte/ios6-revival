@@ -372,7 +372,7 @@ static int asEVLogs;   // first few calls only, the getter runs on every request
                           @"ISOperation", @"ISLoadURLBagOperation", @"ISURLBag", @"ISCertificate", @"SSURLBag", @"SSURLRequestProperties", @"SSMutableURLRequestProperties", nil];
         NSMutableArray *missing = [NSMutableArray array];
         for (NSString *n in names) if (!NSClassFromString(n)) [missing addObject:n];
-        ASLog(@"LOAD", @"logger 0.0.4 loaded; missing classes: %@", [missing count] ? [missing componentsJoinedByString:@","] : @"none");
+        ASLog(@"LOAD", @"logger 0.0.5 loaded; missing classes: %@", [missing count] ? [missing componentsJoinedByString:@","] : @"none");
         %init;
         ASDelegatesInit();
         ASBagSelfTest();
