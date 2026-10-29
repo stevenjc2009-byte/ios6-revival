@@ -1,0 +1,14 @@
+# Python
+server/.venv/
+server/cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Theos build output (the finished .deb in tweak/packages/ is kept)
+tweak/.theos/
+tweak/obj/
+
+# Agent scratch files left in the project root
+/tweak-agent-logic.h*
+/.

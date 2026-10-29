@@ -1,0 +1,36 @@
+[Unit]
+Description=Update ytserver (yt-dlp + repo), self-test, roll back on failure
+Documentation=https://github.com/stevenjc2009-byte/ios6-revival
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/ytserver-update
+TimeoutStartSec=1800
+Nice=10
+RuntimeDirectory=ytserver-update
+
+# Runs as root inside the unprivileged container, so it is sandboxed too. It
+# may only write under /opt (the new tree and the previous tree it keeps for
+# rollback). The service restart goes over systemd's own unix socket.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_UNIX
+SystemCallArchitectures=native
+Environment=PIP_NO_CACHE_DIR=1
+Environment=PIP_DISABLE_PIP_VERSION_CHECK=1

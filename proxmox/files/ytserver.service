@@ -1,0 +1,67 @@
+[Unit]
+Description=ios6-revival YouTube translation server
+Documentation=https://github.com/stevenjc2009-byte/ios6-revival
+After=network-online.target nftables.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ytserver
+Group=ytserver
+WorkingDirectory=/opt/ytserver
+# Tunables (port, cache size, max height) live in this file; written by container-setup.sh.
+EnvironmentFile=/etc/ytserver/ytserver.env
+# HOME and the tool caches point into the private /tmp (PrivateTmp below), so
+# ProtectHome stays on and the only persistent write path is the media cache.
+# The caches (yt-dlp player cache, deno cache) are rebuilt after a restart.
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/tmp
+Environment=XDG_CACHE_HOME=/tmp/cache
+Environment=DENO_DIR=/tmp/deno
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/ytserver/venv/bin/python -m ytserver
+Restart=on-failure
+RestartSec=3
+
+# ---- sandbox (every directive below exists in Debian 12's systemd 252) ----
+# This process feeds attacker-influenced data (YouTube pages, media) to yt-dlp,
+# ffmpeg and deno, so it gets no capabilities, no new privileges, a read-only
+# filesystem apart from its cache directory, and no kernel surface.
+CapabilityBoundingSet=
+AmbientCapabilities=
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+# MemoryDenyWriteExecute=yes is deliberately NOT set: deno embeds V8, a JIT that
+# must map memory writable+executable. With W^X enforced it aborts at start-up
+# and yt-dlp can no longer solve YouTube's JavaScript challenges.
+#
+# AF_INET only: IPv6 is disabled in this container (sysctl) and blocked by the
+# host firewall; AF_UNIX is for journald and local IPC. No netlink, no raw.
+RestrictAddressFamilies=AF_INET AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+# A denied syscall returns EPERM (diagnosable, libraries can fall back) rather
+# than killing the process with SIGSYS.
+SystemCallErrorNumber=EPERM
+# The one persistent write path: the video/metadata cache.
+ReadWritePaths=/var/cache/ytserver
+MemoryMax=768M
+TasksMax=128
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

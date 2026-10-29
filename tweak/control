@@ -1,0 +1,9 @@
+Package: com.stevenjc.ios6revival.youtube
+Name: iOS 6 Revival YouTube
+Version: 0.1.0
+Architecture: iphoneos-arm
+Description: Sends the App Store YouTube app's dead Google API traffic to your own server (Server URL in Settings).
+Maintainer: steve
+Author: steve
+Section: Tweaks
+Depends: mobilesubstrate, preferenceloader

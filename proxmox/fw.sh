@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# fw.sh -- sourced by install-main.sh. Proxmox firewall pieces: the per-guest
+# <VMID>.fw file, the datacenter switch, and a check that rules went live.
+# Expects: VMID CT_IP GW DHCP ALLOWED[] HOST_IPS[] EGRESS_PORTS DRY_RUN
+#          and the say/warn/die/confirm_yes helpers from install-main.sh.
+
+FW_DIR=${YTS_FW_DIR:-/etc/pve/firewall}
+CLUSTER_FW="$FW_DIR/cluster.fw"
+
+# Policy choice: policy_out DROP plus explicit accepts (fail closed). A mistake
+# or a missing rule blocks traffic instead of opening it. Because "the internet
+# but not the LAN" cannot be an accept rule, the private ranges are dropped
+# first and the internet accept (tcp 80/443 only) comes last. First match wins
+# in PVE, so the gateway-DNS accepts MUST stay above the 192.168/16 drop.
+fw_render() {
+    local c h
+    cat <<EOF
+# ios6-revival ytserver (CT ${VMID}) -- written by proxmox/install.sh
+# Enforced by the Proxmox host; root inside the container cannot change it.
+# Rules are first-match-wins. To change who may connect, edit the IN ACCEPT
+# lines (and the ipset if the container IP changes); pve-firewall reloads in ~10 s.
+[OPTIONS]
+enable: 1
+policy_in: DROP
+policy_out: DROP
+ipfilter: 1
+macfilter: 1
+dhcp: ${DHCP}
+ndp: 0
+radv: 0
+log_level_in: nolog
+log_level_out: nolog
+
+EOF
+    if [[ -n ${CT_IP:-} ]]; then
+        printf '[IPSET ipfilter-net0]\n%s\n\n' "$CT_IP"
+    fi
+    echo "[RULES]"
+    for c in "${ALLOWED[@]}"; do
+        echo "IN ACCEPT -source ${c} -p tcp -dport 8080 # allowed client (iPhone)"
+    done
+    cat <<EOF
+OUT ACCEPT -dest ${GW} -p udp -dport 53 # DNS via the gateway only
+OUT ACCEPT -dest ${GW} -p tcp -dport 53 # DNS over TCP via the gateway only
+EOF
+    for h in "${HOST_IPS[@]}"; do
+        echo "OUT DROP -dest ${h} # the Proxmox host itself (web UI :8006, SSH)"
+    done
+    cat <<EOF
+OUT DROP -dest 10.0.0.0/8 # private LAN
+OUT DROP -dest 172.16.0.0/12 # private LAN
+OUT DROP -dest 192.168.0.0/16 # private LAN (router, iPhone, PCs)
+OUT DROP -dest 100.64.0.0/10 # CGNAT / Tailscale
+OUT DROP -dest 169.254.0.0/16 # link-local
+OUT DROP -dest 224.0.0.0/4 # multicast
+OUT DROP -dest 240.0.0.0/4 # reserved
+OUT ACCEPT -dest 0.0.0.0/1,128.0.0.0/1 -p tcp -dport ${EGRESS_PORTS} # internet, web ports only; two IPv4 halves so the rule is never applied to IPv6
+EOF
+}
+
+fw_write() {
+    local f="$FW_DIR/${VMID}.fw"
+    if [[ $DRY_RUN -eq 1 ]]; then
+        echo "---- would write $f ----"; fw_render; echo "---- end ----"; return 0
+    fi
+    install -d "$FW_DIR"
+    [[ -f $f ]] && cp -a "$f" "/root/${VMID}.fw.bak.$(date +%s)"
+    fw_render > "$f"
+    say "wrote $f"
+}
+
+# Datacenter firewall must be ON for any guest .fw to take effect. Host and
+# existing guests stay unaffected: policy_in/out ACCEPT at datacenter level, and
+# host.fw is never touched.
+cluster_fw_ensure() {
+    local en pin tmp
+    if [[ -f $CLUSTER_FW ]]; then
+        en=$(awk '/^\[/{s=($0=="[OPTIONS]")} s&&/^enable:/{print $2}' "$CLUSTER_FW" | tail -1)
+        pin=$(awk '/^\[/{s=($0=="[OPTIONS]")} s&&/^policy_in:/{print $2}' "$CLUSTER_FW" | tail -1)
+        if [[ $en == 1 ]]; then
+            say "datacenter firewall already enabled -- $CLUSTER_FW left untouched"
+            [[ -z $pin || $pin == ACCEPT ]] || warn "your datacenter policy_in is $pin (your own rules); not changed"
+            return 0
+        fi
+        [[ -z $pin || $pin == ACCEPT ]] || \
+            die "$CLUSTER_FW is disabled but sets policy_in: $pin. Enabling it could lock you out of the web UI/SSH; enable it yourself (Datacenter > Firewall > Options) after checking your rules, then re-run."
+    fi
+    cat <<EOF
+
+ DATACENTER FIREWALL CHANGE (needed: guest firewalls only work when it is on)
+   file    : $CLUSTER_FW  ($( [[ -f $CLUSTER_FW ]] && echo "exists, enable is off/missing" || echo "does not exist" ))
+   change  : [OPTIONS] enable: 1, policy_in: ACCEPT, policy_out: ACCEPT
+   effect  : the Proxmox host and all other guests keep accepting everything, exactly as now.
+             Only guests with their own enabled .fw (this container) get filtered.
+   untouched: host.fw and every other guest's .fw.  Backup of the old file: /root/cluster.fw.bak.*
+EOF
+    if [[ $DRY_RUN -eq 1 ]]; then echo " (dry run: nothing changed)"; return 0; fi
+    confirm_yes "YTS_ACCEPT_CLUSTER_FW"
+    install -d "$FW_DIR"
+    tmp=$(mktemp)
+    if [[ -f $CLUSTER_FW ]]; then
+        cp -a "$CLUSTER_FW" "/root/cluster.fw.bak.$(date +%s)"
+        cp "$CLUSTER_FW" "$tmp"
+        grep -q '^\[OPTIONS\]' "$tmp" || { printf '[OPTIONS]\n\n' | cat - "$tmp" > "$tmp.n"; mv "$tmp.n" "$tmp"; }
+        if grep -q '^enable:' "$tmp"; then sed -i 's/^enable:.*/enable: 1/' "$tmp"
+        else sed -i '/^\[OPTIONS\]/a enable: 1' "$tmp"; fi
+        grep -q '^policy_in:' "$tmp" || sed -i '/^\[OPTIONS\]/a policy_in: ACCEPT' "$tmp"
+        grep -q '^policy_out:' "$tmp" || sed -i '/^\[OPTIONS\]/a policy_out: ACCEPT' "$tmp"
+    else
+        printf '[OPTIONS]\nenable: 1\npolicy_in: ACCEPT\npolicy_out: ACCEPT\n' > "$tmp"
+    fi
+    cat "$tmp" > "$CLUSTER_FW"      # pmxcfs: write in place, no rename
+    rm -f "$tmp"
+    say "datacenter firewall enabled ($CLUSTER_FW)"
+}
+
+fw_applied() {
+    iptables-save 2>/dev/null | grep -q "veth${VMID}i0" && return 0
+    nft list ruleset 2>/dev/null | grep -q "veth${VMID}i0" && return 0
+    return 1
+}
+
+fw_wait_applied() {
+    systemctl is-active --quiet pve-firewall || { warn "pve-firewall not running; starting it"; systemctl enable --now pve-firewall; }
+    for _ in $(seq 1 45); do fw_applied && return 0; sleep 2; done
+    return 1
+}
