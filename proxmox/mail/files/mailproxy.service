@@ -1,0 +1,60 @@
+[Unit]
+Description=Email OAuth 2.0 proxy (Gmail / Outlook bridge for iOS 6 Mail)
+Documentation=https://github.com/stevenjc2009-byte/ios6-revival
+After=network-online.target nftables.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mailproxy
+Group=mailproxy
+# -I: ignore the environment and the current directory; -B: no bytecode (/opt is read-only here).
+# No --debug: upstream warns debug logging may include credentials. No --external-auth:
+# authorisation needs a terminal and is done by `mail-authorise`, which stops this unit while it runs.
+ExecStart=/usr/bin/python3 -I -B /opt/mailproxy/emailproxy.py --no-gui \
+    --config-file /etc/mailproxy/emailproxy.config \
+    --cache-store /var/lib/mailproxy/tokens.cache
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/nonexistent
+Restart=on-failure
+RestartSec=5
+
+# ---- sandbox (every directive exists in Debian 12's systemd 252) ----
+# The only persistent write path is the token store, /var/lib/mailproxy (StateDirectory,
+# created 0700 for User=). The config is read-only to the service.
+CapabilityBoundingSet=
+AmbientCapabilities=
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+# Python has no JIT, so W^X can be enforced (unlike deno in the YouTube container).
+MemoryDenyWriteExecute=yes
+# IPv4 + unix sockets (journald) only; IPv6 is off in this container and dropped by the host firewall.
+RestrictAddressFamilies=AF_INET AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+StateDirectory=mailproxy
+StateDirectoryMode=0700
+ReadOnlyPaths=/etc/mailproxy
+LimitCORE=0
+MemoryMax=256M
+TasksMax=64
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
