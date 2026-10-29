@@ -114,14 +114,38 @@ EOF
     say "datacenter firewall enabled ($CLUSTER_FW)"
 }
 
+# Host uses the nftables backend (proxmox-firewall) when host.fw sets "nftables: 1".
+fw_nft_backend() {
+    awk '/^\[/{s=($0=="[OPTIONS]")} s&&/^nftables:/{print $2}' "${YTS_HOST_FW:-/etc/pve/local/host.fw}" 2>/dev/null | grep -q '^1$'
+}
+
+# iptables backend names guest chains after the veth (veth109i0-IN); the
+# nftables backend names them guest-109-in / guest-109-out.
 fw_applied() {
-    iptables-save 2>/dev/null | grep -q "veth${VMID}i0" && return 0
-    nft list ruleset 2>/dev/null | grep -q "veth${VMID}i0" && return 0
+    local pat="veth${VMID}i0|guest-${VMID}-(in|out)"
+    iptables-save 2>/dev/null | grep -qE "$pat" && return 0
+    command -v iptables-legacy-save >/dev/null && iptables-legacy-save 2>/dev/null | grep -qE "$pat" && return 0
+    nft list ruleset 2>/dev/null | grep -qE "$pat" && return 0
     return 1
 }
 
 fw_wait_applied() {
-    systemctl is-active --quiet pve-firewall || { warn "pve-firewall not running; starting it"; systemctl enable --now pve-firewall; }
+    local svc=pve-firewall
+    fw_nft_backend && svc=proxmox-firewall
+    systemctl is-active --quiet "$svc" || { warn "$svc not running; starting it"; systemctl enable --now "$svc"; }
     for _ in $(seq 1 45); do fw_applied && return 0; sleep 2; done
     return 1
+}
+
+# Printed when the rules never show up, so the next report has the evidence.
+fw_diagnose() {
+    echo "---- firewall diagnostics (send this whole block) ----"
+    pve-firewall status 2>&1
+    echo "backend: $(fw_nft_backend && echo nftables || echo iptables); pve-firewall $(systemctl is-active pve-firewall); proxmox-firewall $(systemctl is-active proxmox-firewall 2>/dev/null)"
+    pct config "$VMID" 2>&1 | grep -E '^(net0|features|unprivileged):'
+    ip -br link 2>/dev/null | grep -E "(veth|fwbr|fwpr|fwln)${VMID}" || echo "no ${VMID} interfaces on the host"
+    echo "iptables lines: $(iptables-save 2>/dev/null | grep -c "${VMID}i0")  nft lines: $(nft list ruleset 2>/dev/null | grep -cE "${VMID}i0|guest-${VMID}-")"
+    pve-firewall compile 2>&1 | grep -iE "error|warn|unable|parse|illegal|${VMID}\.fw" | head -20
+    journalctl -u pve-firewall -u proxmox-firewall -n 15 --no-pager 2>&1
+    echo "---- end ----"
 }

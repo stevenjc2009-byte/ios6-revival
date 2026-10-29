@@ -190,7 +190,7 @@ fi
 tcp_open() { pct exec "$VMID" -- timeout 5 bash -c "exec 3<>/dev/tcp/$1/$2" >/dev/null 2>&1; }
 if [[ $DRY_RUN -eq 0 ]]; then
     say "waiting for the host firewall to apply the rules"
-    fw_wait_applied || { pct stop "$VMID"; die "pve-firewall did not apply rules for CT ${VMID} -- container stopped, nothing installed. Check: pve-firewall status; cat /etc/pve/firewall/${VMID}.fw"; }
+    fw_wait_applied || { fw_diagnose; pct stop "$VMID"; die "pve-firewall did not apply rules for CT ${VMID} -- container stopped, nothing installed. Send the diagnostics block above; remove the container with: pct destroy ${VMID}"; }
     sleep 3
     if tcp_open "${HOST_IPS[0]}" 8006; then
         pct stop "$VMID"; die "WALL FAILED: the container reached the Proxmox host ${HOST_IPS[0]}:8006. Container stopped, nothing installed."
