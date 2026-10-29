@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
-from .models import Channel, Playlist, Video
+from .models import Channel, Comment, Playlist, Video
 
 NS = {
     "atom": "http://www.w3.org/2005/Atom",
@@ -196,6 +196,33 @@ def playlist_entry(parent: ET.Element | None, p: Playlist, base: str) -> ET.Elem
     el(entry, "yt:countHint", p.count)
     if p.thumb_video_id:
         el(entry, "media:group").append(_thumb(base, p.thumb_video_id))
+    return entry
+
+
+def comment_entry(parent: ET.Element | None, c: Comment, video_id: str, base: str) -> ET.Element:
+    """One GData v2 comment (top level only; the app has no reply threads)."""
+    entry = el(parent, "atom:entry", gd_etag=f'W/"{c.id}"')
+    when = iso(c.published)
+    author_id = c.channel_id or "UC"
+    el(entry, "atom:id", f"tag:youtube.com,2008:video:{video_id}:comment:{c.id}")
+    el(entry, "atom:published", when)
+    el(entry, "atom:updated", when)
+    el(entry, "atom:category", scheme=KIND, term=YT + "#comment")
+    el(entry, "atom:title", " ".join(c.text.split())[:60], type="text")
+    el(entry, "atom:content", c.text, type="text")
+    el(entry, "atom:link", rel="related", type="application/atom+xml", href=f"{base}/feeds/api/videos/{video_id}?v=2")
+    el(entry, "atom:link", rel="alternate", type="text/html",
+       href=f"https://www.youtube.com/watch?v={video_id}&lc={c.id}")
+    el(entry, "atom:link", rel="self", type="application/atom+xml",
+       href=f"{base}/feeds/api/videos/{video_id}/comments/{c.id}?v=2")
+    author = el(entry, "atom:author")
+    el(author, "atom:name", c.author)
+    el(author, "atom:uri", f"{base}/feeds/api/users/{author_id}")
+    el(author, "yt:userId", author_id)
+    el(entry, "yt:channelId", author_id)
+    el(entry, "yt:replyCount", c.replies)
+    el(entry, "yt:videoid", video_id)
+    el(entry, "gd:rating", average=5, max=5, min=1, numRaters=c.likes, rel="http://schemas.google.com/g/2005#overall")
     return entry
 
 

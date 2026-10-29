@@ -37,10 +37,22 @@ class Playlist:
 
 
 @dataclass
+class Comment:
+    id: str
+    text: str = ""
+    author: str = ""
+    channel_id: str = ""
+    published: datetime | None = None
+    likes: int = 0
+    replies: int = 0
+
+
+@dataclass
 class Page:
     """One page of results plus the token for the next upstream page."""
 
     videos: list[Video] = field(default_factory=list)
     channels: list[Channel] = field(default_factory=list)
     playlists: list[Playlist] = field(default_factory=list)
+    comments: list[Comment] = field(default_factory=list)
     token: str = ""

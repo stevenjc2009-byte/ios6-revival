@@ -60,7 +60,8 @@ def fail(status: int, message: str) -> Response:
 def _make_feed(title: str, path: str, page: Page, more: bool, start: int, count: int,
                params: dict | None = None, kind: str = "video") -> Response:
     base = base_url()
-    items = getattr(page, {"video": "videos", "channel": "channels", "playlist": "playlists"}[kind])
+    items = getattr(page, {"video": "videos", "channel": "channels", "playlist": "playlists",
+                           "comment": "comments"}[kind])
     window = items[start - 1:start - 1 + count]
     total = start - 1 + len(items[start - 1:]) + (count if more else 0)
     nxt = ""
@@ -73,6 +74,8 @@ def _make_feed(title: str, path: str, page: Page, more: bool, start: int, count:
     for i, item in enumerate(window):
         if kind == "video":
             atom.video_entry(root, item, base, start + i)
+        elif kind == "comment":
+            atom.comment_entry(root, item, path.split("/")[-2], base)
         elif kind == "channel":
             atom.channel_entry(root, item, base, thumbs.encode_url(item.avatar))
         else:
@@ -154,9 +157,20 @@ def related(vid: str):
     return _make_feed("Related videos", f"/feeds/api/videos/{vid}/related", page, more, start, count)
 
 
+@bp.get("/feeds/api/videos/<vid>/comments")
+@upstream_guard
+def video_comments(vid: str):
+    if not is_video_id(vid):
+        return fail(400, "bad video id")
+    start, count = paging(request.args.get("start-index"), request.args.get("max-results"))
+    page, more = svc().it.comments(vid, _want(start, count))
+    return _make_feed("Comments", f"/feeds/api/videos/{vid}/comments", page, more, start, count,
+                      kind="comment")
+
+
 @bp.get("/feeds/api/videos/<vid>/<what>")
 def video_sub(vid: str, what: str):
-    """comments / responses / captions / complaints: valid but empty."""
+    """responses / captions / complaints: valid but empty."""
     if not is_video_id(vid):
         return fail(400, "bad video id")
     return empty_feed(what.capitalize())

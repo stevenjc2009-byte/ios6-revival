@@ -19,6 +19,9 @@ class FakeIT:
     def video(self, vid):
         return Video(id=vid, title="t", author="a", duration=5)
 
+    def comments(self, vid, want):
+        return Page(), False
+
 
 class FakeStreams:
     def __init__(self):

@@ -9,11 +9,11 @@ from __future__ import annotations
 import base64
 import logging
 import threading
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
-from . import parse
+from . import comments, parse
 from .cache import TTLCache
 from .ids import is_channel_id
 from .models import Channel, Page, Video
@@ -87,7 +87,7 @@ class InnerTube:
 
     # ---- paged lists -----------------------------------------------------
     def collect(self, key: Any, first: tuple[str, dict], want: int,
-                default_author: str = "") -> tuple[Page, bool]:
+                default_author: str = "", extract: Callable[[Any, str], Page] = parse.extract) -> tuple[Page, bool]:
         """Gather at least `want` items by following continuations.
 
         GData pages by offset, InnerTube by token, so we keep the token chain
@@ -105,7 +105,7 @@ class InnerTube:
                     doc = self.call(*first)
                 else:
                     doc = self.call(first[0], {"continuation": state["token"]})
-                page = parse.extract(doc, default_author)
+                page = extract(doc, default_author)
                 state["n"] += 1
                 state["token"] = page.token if page.token != state["token"] else ""
                 _merge(merged, page)
@@ -119,6 +119,13 @@ class InnerTube:
 
     def related(self, video_id: str, want: int) -> tuple[Page, bool]:
         return self.collect(("next", video_id), ("next", {"videoId": video_id}), want)
+
+    def comments(self, video_id: str, want: int) -> tuple[Page, bool]:
+        token = comments.comments_token(self.call("next", {"videoId": video_id}))
+        if not token:
+            return Page(), False
+        return self.collect(("comments", video_id), ("next", {"continuation": token}), want,
+                            extract=comments.extract)
 
     def browse(self, browse_id: str, params: str, want: int, author: str = "") -> tuple[Page, bool]:
         body = {"browseId": browse_id}
@@ -146,10 +153,10 @@ class InnerTube:
 
 
 def _count(page: Page) -> int:
-    return max(len(page.videos), len(page.channels), len(page.playlists))
+    return max(len(page.videos), len(page.channels), len(page.playlists), len(page.comments))
 
 
 def _merge(into: Page, new: Page) -> None:
-    for attr in ("videos", "channels", "playlists"):
+    for attr in ("videos", "channels", "playlists", "comments"):
         have = {i.id for i in getattr(into, attr)}
         getattr(into, attr).extend(i for i in getattr(new, attr) if i.id not in have)
