@@ -61,9 +61,11 @@ def test_search_returns_atom_and_escapes_query(client):
     assert feed.find(A + "entry/" + A + "title").text == "<b>&x"
 
 
-def test_video_entry_triggers_prefetch(client):
-    r = client.get("/feeds/api/videos/jNQXAC9IVRw")
-    assert r.status_code == 200
+@pytest.mark.parametrize("path", ["/feeds/api/videos/jNQXAC9IVRw", "/feeds/player/videos/jNQXAC9IVRw"])
+def test_video_entry_triggers_prefetch(client, path):
+    # /feeds/player/... is what the app asks for when a youtube:// link opens it
+    r = client.get(path)
+    assert r.status_code == 200 and r.mimetype == "application/atom+xml"
     assert client.application.extensions["yts"].streams.prefetched == ["jNQXAC9IVRw"]
 
 

@@ -131,6 +131,7 @@ def search_channels():
 
 # ------------------------------------------------------------------ one video
 @bp.get("/feeds/api/videos/<vid>")
+@bp.get("/feeds/player/videos/<vid>")  # asked for when a youtube:// link opens the app
 @upstream_guard
 def video_entry(vid: str):
     if not is_video_id(vid):
