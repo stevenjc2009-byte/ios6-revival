@@ -27,11 +27,8 @@ class FakeStreams:
     def prefetch(self, vid):
         self.prefetched.append(vid)
 
-    def get(self, vid, timeout):
+    def open(self, vid, method, rng, timeout):
         raise StreamError("nope")
-
-    def hold(self, path, delta):
-        pass
 
 
 class FakeThumbs:
@@ -78,7 +75,7 @@ def test_bad_ids_rejected_before_any_upstream_call(client, path):
     assert client.application.extensions["yts"].streams.prefetched == []
 
 
-def test_failed_build_is_502_not_500(client):
+def test_unresolvable_video_is_502_not_500(client):
     assert client.get("/stream/jNQXAC9IVRw.mp4").status_code == 502
 
 

@@ -9,10 +9,10 @@ Type=simple
 User=ytserver
 Group=ytserver
 WorkingDirectory=/opt/ytserver
-# Tunables (port, cache size, max height) live in this file; written by container-setup.sh.
+# Tunables (port, max height) live in this file; written by container-setup.sh.
 EnvironmentFile=/etc/ytserver/ytserver.env
 # HOME and the tool caches point into the private /tmp (PrivateTmp below), so
-# ProtectHome stays on and the only persistent write path is the media cache.
+# ProtectHome stays on and the only persistent write path is the cache dir.
 # The caches (yt-dlp player cache, deno cache) are rebuilt after a restart.
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=HOME=/tmp
@@ -25,8 +25,8 @@ Restart=on-failure
 RestartSec=3
 
 # ---- sandbox (every directive below exists in Debian 12's systemd 252) ----
-# This process feeds attacker-influenced data (YouTube pages, media) to yt-dlp,
-# ffmpeg and deno, so it gets no capabilities, no new privileges, a read-only
+# This process feeds attacker-influenced data (YouTube pages, media) to yt-dlp
+# and deno, so it gets no capabilities, no new privileges, a read-only
 # filesystem apart from its cache directory, and no kernel surface.
 CapabilityBoundingSet=
 AmbientCapabilities=
@@ -57,7 +57,7 @@ SystemCallFilter=@system-service
 # A denied syscall returns EPERM (diagnosable, libraries can fall back) rather
 # than killing the process with SIGSYS.
 SystemCallErrorNumber=EPERM
-# The one persistent write path: the video/metadata cache.
+# The one persistent write path (yt-dlp player cache; no video is stored).
 ReadWritePaths=/var/cache/ytserver
 MemoryMax=768M
 TasksMax=128

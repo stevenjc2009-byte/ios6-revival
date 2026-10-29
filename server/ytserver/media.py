@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import logging
 import secrets
+from typing import Iterator
 
-from flask import Blueprint, Response, current_app, request, send_file
+import httpx
+
+from flask import Blueprint, Response, current_app, request
 
 from .feeds import fail, svc
 from .ids import is_video_id
@@ -12,6 +15,7 @@ from .streams import StreamError, StreamPending
 
 log = logging.getLogger("ytserver.media")
 bp = Blueprint("media", __name__)
+CHUNK = 64 * 1024
 _DEVICE_KEY = secrets.token_hex(16)
 
 
@@ -41,22 +45,36 @@ def stream(name: str):
     vid = name[:-4] if name.endswith(".mp4") else name
     if not is_video_id(vid):
         return fail(400, "bad video id")
-    manager = svc().streams
     try:
-        path = manager.get(vid, svc().cfg.stream_wait)
+        up = svc().streams.open(vid, request.method, request.headers.get("Range"), svc().cfg.stream_wait)
     except StreamPending:
-        resp = fail(503, "still preparing this video, retry shortly")
+        resp = fail(503, "still looking this video up, retry shortly")
         resp.headers["Retry-After"] = "5"
         return resp
     except StreamError as exc:
         log.warning("stream %s unavailable: %s", vid, exc)
         return fail(502, "video unavailable")
-    manager.hold(path, 1)
-    # conditional=True: werkzeug answers Range / If-Range with 206 + Content-Range.
-    resp = send_file(path, mimetype="video/mp4", conditional=True, etag=True, max_age=0)
-    resp.headers["Accept-Ranges"] = "bytes"
-    resp.call_on_close(lambda: manager.hold(path, -1))
+    if up.status_code not in (200, 206, 416):
+        up.close()
+        log.warning("stream %s: googlevideo answered %d", vid, up.status_code)
+        return fail(502, "video unavailable")
+    # Relay bytes as they arrive; googlevideo already answers Range with 206 +
+    # Content-Range, so seeking works and nothing is written anywhere.
+    headers = {k: up.headers[k] for k in ("Content-Length", "Content-Range") if k in up.headers}
+    headers["Accept-Ranges"] = "bytes"
+    resp = Response(_relay(vid, up), status=up.status_code, mimetype="video/mp4",
+                    headers=headers, direct_passthrough=True)
+    resp.call_on_close(up.close)  # also runs for HEAD, whose body is never iterated
     return resp
+
+
+def _relay(vid: str, up: httpx.Response) -> Iterator[bytes]:
+    try:
+        yield from up.iter_raw(CHUNK)
+    except httpx.HTTPError as exc:  # the phone re-requests the missing range
+        log.info("stream %s: upstream dropped mid-relay (%s)", vid, type(exc).__name__)
+    finally:
+        up.close()
 
 
 def _image_response(data: bytes | None) -> Response:

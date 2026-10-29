@@ -36,7 +36,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/stevenjc2009-byte/ios6-r
 ## Threat model
 
 The attacker is assumed to get **code execution as `ytserver`**, and then possibly root,
-inside the container (a bug in yt-dlp, deno, ffmpeg or the server). The goal is that
+inside the container (a bug in yt-dlp, deno or the server). The goal is that
 this reaches nothing else.
 
 ## The walls (outside in)

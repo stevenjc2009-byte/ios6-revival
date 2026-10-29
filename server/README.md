@@ -7,24 +7,23 @@ app can search, browse and play again. Python 3.11, Flask + waitress.
 
     cd server
     python -m venv .venv && .venv\Scripts\pip install -r requirements.txt
-    .venv\Scripts\python -m ytserver            # needs ffmpeg, ffprobe and deno on PATH
+    .venv\Scripts\python -m ytserver            # needs deno on PATH
 
 Tests: `pip install -r requirements-dev.txt && python -m pytest -q tests`
 
 | Env var | Default | Meaning |
 |---|---|---|
 | `YTS_BIND` / `YTS_PORT` | `0.0.0.0` / `8080` | listen address |
-| `YTS_CACHE_DIR` | `./cache` | built MP4s live in `<dir>/videos` |
-| `YTS_CACHE_MAX_MB` | `4096` | LRU eviction limit |
-| `YTS_MAX_HEIGHT` | `360` | maximum output height |
+| `YTS_CACHE_DIR` | `./cache` | yt-dlp player-script cache; no video is stored (an old `<dir>/videos` is deleted at start) |
+| `YTS_MAX_HEIGHT` | `360` | maximum stream height |
 | `YTS_PUBLIC_URL` | derived from `Host` | base URL written into feeds |
-| `YTS_STREAM_WAIT` `YTS_WORKERS` `YTS_THREADS` `YTS_META_TTL` | 100 / 2 / 16 / 600 | extras: seconds a stream request blocks, parallel builds, HTTP threads, metadata cache seconds |
+| `YTS_STREAM_WAIT` `YTS_WORKERS` `YTS_THREADS` `YTS_META_TTL` | 45 / 3 / 16 / 600 | extras: seconds a stream request waits for the URL lookup, parallel lookups, HTTP threads, metadata cache seconds |
 
 ## Endpoints
 
 - `GET /healthz` -> `200 ok`
 - Search: `/feeds/api/videos?q=&start-index=&max-results=&orderby=&time=&duration=`, `/feeds/api/channels?q=`
-- Video entry `/feeds/api/videos/<id>` (also starts building the file), `/related`; `/comments`, `/responses`, `/captions`, `/complaints` return valid empty feeds
+- Video entry `/feeds/api/videos/<id>` (also starts looking up the stream URL), `/related`; `/comments`, `/responses`, `/captions`, `/complaints` return valid empty feeds
 - `/feeds/api/standardfeeds/[region/]<feed>` (`most_popular`, `most_viewed`, `top_rated`, `recently_featured`, `most_recent`, ... and `most_popular_<Category>`)
 - `/feeds/api/users/<UC id | @handle | name>` (channel entry), `/uploads`, `/playlists`; `/feeds/api/channels/<id>`
 - `/feeds/api/playlists/<id>`
@@ -54,33 +53,37 @@ to obtain the media file.
   browse return nothing for signed-out clients, so standard feeds are synthesised
   from filtered searches (this-week / this-month, category -> query map).
 
-## Playback: blocking build, not progressive streaming
+## Playback: pass-through streaming, nothing stored
 
-`/stream/<id>` blocks until a finished, faststart H.264 (Main L3.0) + AAC MP4 of at
-most `YTS_MAX_HEIGHT` exists, then serves it with `send_file`, which gives correct
-Content-Length, ETag and `Range` -> `206`.
+`/stream/<id>` streams like the real YouTube player: no copy of the video is kept
+on the server or the phone.
 
-- The iOS 6 media player needs a seekable file with a known length and `moov` at the
-  front. Serving a file that is still being written gives a wrong Content-Length and
-  breaks seeking; remuxing on the fly cannot support Range at all.
-- Fast path: when yt-dlp can fetch a progressive avc1+mp4a format (itag 18) the file
-  is only checked with ffprobe and copied (`+faststart`), typically 3-25 s even for
-  long videos. Otherwise the fallback chain is dash avc1+mp4a, then any format
-  transcoded with libx264/aac. `plan_ffmpeg` copies each stream when it already
-  complies and re-encodes only the part that does not.
+- yt-dlp only looks up the direct googlevideo URL of the progressive H.264 + AAC
+  MP4 (itag 18, <= `YTS_MAX_HEIGHT`), which the iPhone 4 plays as-is and which has
+  `moov` at the front. Nothing is downloaded by yt-dlp.
+- The route relays that URL's bytes to the phone in 64 KB chunks as they arrive,
+  forwarding the phone's `Range` header, so googlevideo's own `206` +
+  `Content-Range` give seeking. HEAD is relayed too.
+- The URL is kept in memory until shortly before googlevideo's `expire=` (max 5 h);
+  a `403`/`410` drops it and looks it up again once. googlevideo refuses a fresh URL
+  until its `available_at` time (~4 s), so the relay waits for that.
 - Latency is hidden by prefetch: the app fetches the video entry right before
-  playing, and that request starts the build. Concurrent requests for one id share
-  one build (Future per id); failures are negative-cached briefly.
-- If the build outlasts `YTS_STREAM_WAIT` the route answers `503` + `Retry-After: 5`;
-  an unavailable video gives `502`, never a 500.
-- Cache: LRU by mtime, files being served are never evicted.
+  playing, and that request starts the lookup. Concurrent requests share one
+  lookup (Future per id); failures are negative-cached for 60 s.
+- Measured 2026-10-29: cold start 7.4 s (lookup 4 s + available_at wait), prefetched
+  start 0.13 s, relay 18 MB/s, mid-file seek 0.2 s. The old download-then-serve
+  design took 83 s for a 436 MB video.
+- Videos with no progressive format (live streams) answer `502` "video unavailable":
+  playing them would need a merged or transcoded copy.
+- Lookup slower than `YTS_STREAM_WAIT` -> `503` + `Retry-After: 5`; never a 500.
+- Lookup and relay both use IPv4: googlevideo URLs are bound to the resolving address.
 
 ## Security notes
 
 XML is produced with ElementTree builders (escaped, illegal control characters
 removed). Request input is validated by strict regexes (`ids.py`; video id is
 `^[A-Za-z0-9_-]{11}$`, full match), queries are capped at 200 characters, nothing
-from a request reaches a shell (subprocess argument lists only). Image proxying only
+from a request reaches a shell (no subprocesses). Image proxying only
 contacts `i.ytimg.com`, `yt3.ggpht.com` and `yt3.googleusercontent.com`. Logs hold
 method, path (no query string), status and milliseconds only.
 

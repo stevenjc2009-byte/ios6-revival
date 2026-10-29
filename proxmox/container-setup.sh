@@ -37,7 +37,7 @@ apt-get update -qq --error-on=any || die "apt-get update failed (DNS or egress?)
 apt-get full-upgrade -y -qq -o Dpkg::Options::=--force-confold >/dev/null
 say "installing packages"
 apt-get install -y -qq --no-install-recommends \
-    python3 python3-venv ffmpeg ca-certificates curl unzip nftables unattended-upgrades >/dev/null
+    python3 python3-venv ca-certificates curl unzip nftables unattended-upgrades >/dev/null
 
 # ---------------------------------------------------------------- deno
 case $(uname -m) in
@@ -77,13 +77,10 @@ chmod -R go-w /opt/ytserver
 echo "build-initial" > /opt/ytserver/.build-id     # first updater run replaces it
 say "yt-dlp $(/opt/ytserver/venv/bin/python -m pip show yt-dlp | sed -n 's/^Version: //p')"
 
-CACHE_MB=$(( DISK_GB * 384 ))                       # ~37% of the disk
-(( CACHE_MB > 4096 )) && CACHE_MB=4096
 cat > /etc/ytserver/ytserver.env <<EOF
 YTS_BIND=0.0.0.0
 YTS_PORT=${PORT}
 YTS_CACHE_DIR=/var/cache/ytserver
-YTS_CACHE_MAX_MB=${CACHE_MB}
 YTS_MAX_HEIGHT=360
 EOF
 cat > /etc/ytserver/update.env <<EOF

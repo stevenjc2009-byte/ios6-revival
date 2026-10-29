@@ -107,7 +107,7 @@ ask DISK "Disk in GB:" "8"
 [[ $DRY_RUN -eq 1 ]] || ip link show "$BRIDGE" >/dev/null 2>&1 || die "bridge $BRIDGE does not exist"
 valid_ipv4 "$GW" || die "gateway '$GW' is not an IPv4 address"
 is_int "$RAM" && is_int "$CORES" && is_int "$DISK" || die "RAM, cores and disk must be numbers"
-(( RAM >= 512 && DISK >= 4 )) || die "need at least 512 MB RAM and 4 GB disk (ffmpeg + cache)"
+(( RAM >= 512 && DISK >= 4 )) || die "need at least 512 MB RAM and 4 GB disk"
 IFS=',' read -r -a ALLOWED <<< "${ALLOWED_CSV// /}"
 (( ${#ALLOWED[@]} )) || die "at least one allowed client IP is required"
 for c in "${ALLOWED[@]}"; do

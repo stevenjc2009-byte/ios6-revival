@@ -9,12 +9,11 @@ Owner: steve. iPhone 4 (iPhone3,1), iOS 6.1.3, jailbroken, at 192.168.0.88.
 
 ## Server contract
 - Start: `python -m ytserver` from `server/` (package dir `server/ytserver/`). Dependencies in `server/requirements.txt`.
-- Needs `ffmpeg` and `deno` on PATH (yt-dlp uses deno for YouTube's JS challenges).
+- Needs `deno` on PATH (yt-dlp uses deno for YouTube's JS challenges). No ffmpeg: playback is pass-through.
 - Environment variables (all optional):
   - `YTS_BIND` default `0.0.0.0`
   - `YTS_PORT` default `8080`
-  - `YTS_CACHE_DIR` default `./cache` (video files + metadata cache)
-  - `YTS_CACHE_MAX_MB` default `4096`
+  - `YTS_CACHE_DIR` default `./cache` (yt-dlp's player-script cache only; no video is ever stored)
   - `YTS_MAX_HEIGHT` default `360` (iPhone 4 safe; 480 allowed)
   - `YTS_PUBLIC_URL` default derived from the request Host header — base URL put into returned feed/stream links.
 - `GET /healthz` → `200 ok` (plain text). Used by the installer and the updater self-test.

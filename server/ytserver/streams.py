@@ -1,124 +1,129 @@
-"""Build and cache iPhone-4-playable MP4 files with yt-dlp + ffmpeg.
+"""Pass-through playback: nothing is downloaded or stored.
 
-Output contract for every file in the cache: H.264 (Baseline/Main) + AAC-LC,
-height <= max_height, <= 30 fps, moov atom at the front (faststart).
+yt-dlp only *resolves* a video to the direct googlevideo URL of its
+progressive H.264 + AAC MP4 (one file, itag 18, <= max_height), which the
+iPhone 4 plays as-is. The stream route then relays bytes from that URL to the
+phone as they arrive, forwarding Range requests, exactly like a normal
+YouTube player streams. The server holds only the URL (in memory, until
+googlevideo's own expiry) and the chunk currently in flight.
 
-Build chain (first that succeeds wins):
-  1. progressive avc1+mp4a stream  (single file, cheapest)
-  2. bestvideo avc1 + bestaudio mp4a, merged
-  3. anything <= max_height, transcoded with libx264/aac
-Whatever yt-dlp downloads is then probed with ffprobe: if the codecs already
-fit it is remuxed with `-c copy -movflags +faststart`, otherwise only the
-offending stream(s) are re-encoded.
+Videos with no progressive format (live streams) are reported unavailable:
+playing them would need a merged or transcoded copy.
 """
 from __future__ import annotations
 
-import json
 import logging
 import shutil
-import subprocess
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
-from pathlib import Path
+from dataclasses import dataclass
+from typing import Callable
+from urllib.parse import parse_qs, urlparse
 
-from .cache import evict_lru, touch
+import httpx
+
+from .cache import TTLCache
 from .config import Config
 from .ids import is_video_id
 
 log = logging.getLogger("ytserver.streams")
 
-OK_PROFILES = {"baseline", "constrained baseline", "main"}
-NEG_TTL = 60.0  # seconds a failed build is remembered before retrying
+NEG_TTL = 60.0  # seconds a failed lookup is remembered before retrying
+MAX_TTL = 5 * 3600.0  # googlevideo URLs live 6 h; re-resolve well before
+DEFAULT_TTL = 3600.0  # when the URL carries no expire= parameter
+EXPIRY_MARGIN = 600.0
 
 
 class StreamError(RuntimeError):
-    """No playable file could be produced."""
+    """The video has no playable stream, or YouTube refused it."""
 
 
 class StreamPending(RuntimeError):
-    """The file is still being built; the client should retry."""
+    """The URL lookup is still running; the client should retry."""
 
 
-def format_chain(max_h: int) -> list[tuple[str, str]]:
-    return [
-        ("progressive-avc1", f"b[vcodec^=avc1][acodec^=mp4a][height<={max_h}]"),
-        ("dash-avc1+mp4a", f"bv[vcodec^=avc1][height<={max_h}]+ba[acodec^=mp4a]"),
-        ("any-transcode", f"bv[height<={max_h}]+ba/b[height<={max_h}]/w"),
-    ]
+@dataclass(frozen=True)
+class Source:
+    url: str
+    headers: dict[str, str]
+    available_at: float  # wall clock; googlevideo answers 403 before this
+    ttl: float  # seconds this URL may be reused
 
 
-def plan_ffmpeg(info: dict, max_h: int) -> tuple[list[str], str]:
-    """ffmpeg codec args for a probed file + a label ('copy', 'audio', 'video', 'full')."""
-    v = next((s for s in info.get("streams", []) if s.get("codec_type") == "video"), {})
-    a = next((s for s in info.get("streams", []) if s.get("codec_type") == "audio"), {})
-    fps = 0.0
+def progressive_format(max_h: int) -> str:
+    return f"b[vcodec^=avc1][acodec^=mp4a][height<={max_h}][protocol^=http]"
+
+
+def source_from_info(info: dict) -> Source:
+    """Turn yt-dlp's extract_info(download=False) result into a Source."""
+    url = info.get("url")
+    if not url or not str(info.get("protocol", "")).startswith("http"):
+        raise StreamError("no progressive H.264 stream")
+    ttl = DEFAULT_TTL
     try:
-        num, den = str(v.get("avg_frame_rate", "0/1")).split("/")
-        fps = float(num) / float(den) if float(den) else 0.0
-    except ValueError:
+        expire = float(parse_qs(urlparse(url).query)["expire"][0])
+        ttl = max(60.0, min(MAX_TTL, expire - time.time() - EXPIRY_MARGIN))
+    except (KeyError, ValueError):
         pass
-    v_ok = (v.get("codec_name") == "h264" and str(v.get("profile", "")).lower() in OK_PROFILES
-            and int(v.get("height") or 9999) <= max_h and fps <= 30.5 and v.get("pix_fmt") == "yuv420p")
-    a_ok = a.get("codec_name") == "aac" and str(a.get("profile", "LC")).upper() == "LC"
-    vargs = ["-c:v", "copy"] if v_ok else [
-        "-c:v", "libx264", "-profile:v", "main", "-level", "3.0", "-pix_fmt", "yuv420p",
-        "-preset", "veryfast", "-crf", "23", "-r", "30",
-        "-vf", f"scale=-2:'min(ih,{max_h})'"]
-    aargs = ["-c:a", "copy"] if a_ok else ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]
-    if not a:
-        aargs = ["-an"]
-    label = "copy" if v_ok and a_ok else "audio" if v_ok else "video" if a_ok else "full"
-    return vargs + aargs, label
+    return Source(url, dict(info.get("http_headers") or {}),
+                  float(info.get("available_at") or 0), ttl)
 
 
 class StreamManager:
-    def __init__(self, cfg: Config) -> None:
+    def __init__(self, cfg: Config, *, resolve: Callable[[str], Source] | None = None,
+                 transport: httpx.BaseTransport | None = None) -> None:
         self.cfg = cfg
-        cfg.video_dir.mkdir(parents=True, exist_ok=True)
-        self._pool = ThreadPoolExecutor(max_workers=cfg.workers, thread_name_prefix="build")
+        self._resolve = resolve or self._resolve_ytdlp
+        self._pool = ThreadPoolExecutor(max_workers=cfg.workers, thread_name_prefix="resolve")
         self._jobs: dict[str, Future] = {}
+        self._sources = TTLCache(DEFAULT_TTL, max_items=256)
         self._failed: dict[str, tuple[float, str]] = {}
         self._lock = threading.Lock()
-        self._serving: dict[Path, int] = {}
-        self._clean_stale()
+        # IPv4 for both the lookup and the relay: googlevideo URLs are bound to
+        # the address that resolved them (ip=...), and the container is IPv4-only.
+        self._http = httpx.Client(
+            transport=transport or httpx.HTTPTransport(local_address="0.0.0.0", retries=1),
+            timeout=httpx.Timeout(10.0, read=30.0), follow_redirects=True,
+            limits=httpx.Limits(max_connections=64, max_keepalive_connections=8))
+        self._remove_old_video_cache()
 
     # ---- public ----------------------------------------------------------
-    def path_for(self, vid: str) -> Path:
-        return self.cfg.video_dir / f"{vid}.mp4"
-
-    def ready(self, vid: str) -> Path | None:
-        path = self.path_for(vid)
-        try:
-            if path.stat().st_size > 0:
-                touch(path)
-                return path
-        except OSError:
-            pass
-        return None
-
     def prefetch(self, vid: str) -> None:
-        if is_video_id(vid) and self.ready(vid) is None:
+        if is_video_id(vid) and self._sources.get(vid) is None:
             self._job(vid)
 
-    def get(self, vid: str, timeout: float) -> Path:
-        """Return the finished file, building it if needed (blocks up to timeout)."""
+    def get(self, vid: str, timeout: float) -> Source:
         if not is_video_id(vid):
             raise StreamError("bad video id")
-        path = self.ready(vid)
-        if path:
-            return path
-        fut = self._job(vid)
+        src = self._sources.get(vid)
+        if src is not None:
+            return src
         try:
-            return fut.result(timeout=timeout)
+            return self._job(vid).result(timeout=timeout)
         except FutureTimeout:
             raise StreamPending(vid) from None
 
-    def hold(self, path: Path, delta: int) -> None:
-        """Mark a file as being served so LRU eviction leaves it alone."""
-        with self._lock:
-            self._serving[path] = max(0, self._serving.get(path, 0) + delta)
+    def open(self, vid: str, method: str, rng: str | None, timeout: float) -> httpx.Response:
+        """Start relaying vid from googlevideo; the caller must close() the response."""
+        for attempt in (1, 2):
+            src = self.get(vid, timeout)
+            time.sleep(max(0.0, src.available_at - time.time()))
+            headers = {**src.headers, "Accept-Encoding": "identity"}
+            if rng:
+                headers["Range"] = rng
+            try:
+                resp = self._http.send(self._http.build_request(method, src.url, headers=headers), stream=True)
+            except httpx.HTTPError as exc:
+                raise StreamError(f"upstream: {type(exc).__name__}") from exc
+            if resp.status_code in (403, 410) and attempt == 1:
+                resp.close()  # URL expired or refused: look it up again, once
+                log.info("googlevideo %d for %s, resolving again", resp.status_code, vid)
+                self._sources.pop(vid)
+                continue
+            return resp
+        raise AssertionError("unreachable")
 
     # ---- internals -------------------------------------------------------
     def _job(self, vid: str) -> Future:
@@ -134,13 +139,15 @@ class StreamManager:
                 self._jobs[vid] = fut
             return fut
 
-    def _run(self, vid: str) -> Path:
+    def _run(self, vid: str) -> Source:
+        t0 = time.monotonic()
         try:
-            path = self._build(vid)
-            self._evict(path)
-            return path
+            src = self._resolve(vid)
+            self._sources.set(vid, src, ttl=src.ttl)
+            log.info("resolved %s in %.1fs", vid, time.monotonic() - t0)
+            return src
         except Exception as exc:  # recorded, then re-raised to every waiter
-            log.warning("build failed for %s: %s", vid, exc)
+            log.warning("lookup failed for %s: %s", vid, exc)
             with self._lock:
                 self._failed[vid] = (time.monotonic() + NEG_TTL, str(exc)[:200])
             raise StreamError(str(exc)[:200]) from exc
@@ -148,76 +155,26 @@ class StreamManager:
             with self._lock:
                 self._jobs.pop(vid, None)
 
-    def _clean_stale(self) -> None:
-        for leftover in self.cfg.video_dir.glob("work-*"):
-            shutil.rmtree(leftover, ignore_errors=True)
+    def _remove_old_video_cache(self) -> None:
+        """Earlier versions kept built MP4s here; nothing is stored any more."""
+        old = self.cfg.cache_dir / "videos"
+        if old.is_dir():
+            shutil.rmtree(old, ignore_errors=True)
+            log.info("removed old video cache %s", old)
 
-    def _evict(self, keep: Path) -> None:
-        def busy(p: Path) -> bool:
-            with self._lock:
-                return self._serving.get(p, 0) > 0
-
-        removed = evict_lru(self.cfg.video_dir, self.cfg.cache_max_mb * 1024 * 1024, [keep], busy)
-        if removed:
-            log.info("evicted %d cached video(s)", len(removed))
-
-    def _build(self, vid: str) -> Path:
-        work = self.cfg.video_dir / f"work-{vid}"
-        shutil.rmtree(work, ignore_errors=True)
-        work.mkdir(parents=True)
-        t0 = time.monotonic()
-        try:
-            src, step = self._download(vid, work)
-            final_tmp = work / "final.mp4"
-            label = self._normalise(src, final_tmp)
-            final = self.path_for(vid)
-            final_tmp.replace(final)
-            log.info("built %s via %s/%s in %.1fs (%d KB)", vid, step, label,
-                     time.monotonic() - t0, final.stat().st_size // 1024)
-            return final
-        finally:
-            shutil.rmtree(work, ignore_errors=True)
-
-    def _download(self, vid: str, work: Path) -> tuple[Path, str]:
+    def _resolve_ytdlp(self, vid: str) -> Source:
         import yt_dlp  # imported lazily: heavy, and tests do not need it
 
-        errors: list[str] = []
-        for step, fmt in format_chain(self.cfg.max_height):
-            for stale in work.glob("dl.*"):
-                stale.unlink(missing_ok=True)
-            opts = {
-                "format": fmt, "outtmpl": str(work / "dl.%(ext)s"), "noplaylist": True,
-                "quiet": True, "no_warnings": True, "noprogress": True, "retries": 3,
-                "fragment_retries": 3, "socket_timeout": 20, "concurrent_fragment_downloads": 4,
-                "merge_output_format": "mkv" if step == "any-transcode" else "mp4",
-                "cachedir": str(self.cfg.cache_dir / "ytdlp"), "nocheckcertificate": False,
-            }
-            if shutil.which("deno"):
-                opts["js_runtimes"] = {"deno": {}}
-            try:
-                with yt_dlp.YoutubeDL(opts) as ydl:
-                    ydl.download([f"https://www.youtube.com/watch?v={vid}"])
-            except Exception as exc:  # yt_dlp raises several unrelated types
-                errors.append(f"{step}: {str(exc).splitlines()[-1][:120]}")
-                continue
-            files = [p for p in work.glob("dl.*") if p.suffix not in (".part", ".ytdl")]
-            if files:
-                return max(files, key=lambda p: p.stat().st_size), step
-            errors.append(f"{step}: no output")
-        raise StreamError("; ".join(errors) or "download failed")
-
-    def _normalise(self, src: Path, dest: Path) -> str:
-        probe = subprocess.run(
-            ["ffprobe", "-v", "error", "-print_format", "json", "-show_streams", str(src)],
-            capture_output=True, text=True, timeout=60, check=False)
+        opts = {
+            "format": progressive_format(self.cfg.max_height), "noplaylist": True,
+            "quiet": True, "no_warnings": True, "skip_download": True, "socket_timeout": 20,
+            "source_address": "0.0.0.0", "cachedir": str(self.cfg.cache_dir / "ytdlp"),
+        }
+        if shutil.which("deno"):
+            opts["js_runtimes"] = {"deno": {}}
         try:
-            info = json.loads(probe.stdout or "{}")
-        except ValueError:
-            info = {}
-        codec_args, label = plan_ffmpeg(info, self.cfg.max_height)
-        cmd = ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(src), "-map", "0:v:0", "-map", "0:a:0?",
-               *codec_args, "-movflags", "+faststart", "-f", "mp4", str(dest)]
-        run = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, check=False)
-        if run.returncode != 0 or not dest.exists():
-            raise StreamError("ffmpeg: " + (run.stderr.strip().splitlines() or ["failed"])[-1][:150])
-        return label
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={vid}", download=False)
+        except Exception as exc:  # yt_dlp raises several unrelated types
+            raise StreamError(str(exc).splitlines()[-1][:150]) from exc
+        return source_from_info(info or {})
