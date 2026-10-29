@@ -189,7 +189,7 @@ else
 fi
 
 # ------------------------------------------------------------- prove the wall BEFORE installing anything
-tcp_open() { pct exec "$VMID" -- timeout 5 bash -c "exec 3<>/dev/tcp/$1/$2" >/dev/null 2>&1; }
+tcp_open() { pct exec "$VMID" -- env LC_ALL=C timeout 5 bash -c "exec 3<>/dev/tcp/$1/$2" >/dev/null 2>&1; }
 if [[ $DRY_RUN -eq 0 ]]; then
     say "waiting for the host firewall to apply the rules"
     fw_wait_applied || { fw_diagnose; pct stop "$VMID"; die "pve-firewall did not apply rules for CT ${VMID} -- container stopped, nothing installed. Send the diagnostics block above; remove the container with: pct destroy ${VMID}"; }
@@ -213,7 +213,7 @@ ENVF=$(mktemp); trap 'rm -f "$ENVF"' EXIT
 say "provisioning inside the container (apt, deno, venv, units; takes a few minutes)"
 run pct push "$VMID" "$TARBALL" /root/ytserver-src.tgz
 run pct push "$VMID" "$ENVF" /root/ytserver-setup.env --perms 0600
-run pct exec "$VMID" -- bash -c 'set -e; mkdir -p /root/ytsetup; tar -xzf /root/ytserver-src.tgz -C /root/ytsetup --strip-components=1; bash /root/ytsetup/proxmox/container-setup.sh /root/ytserver-setup.env'
+run pct exec "$VMID" -- env LC_ALL=C bash -c 'set -e; mkdir -p /root/ytsetup; tar -xzf /root/ytserver-src.tgz -C /root/ytsetup --strip-components=1; bash /root/ytsetup/proxmox/container-setup.sh /root/ytserver-setup.env'
 
 # ------------------------------------------------------------- report
 if [[ $DRY_RUN -eq 1 ]]; then DONE_MSG="DRY RUN -- nothing was changed. ytserver would be up in container"; else DONE_MSG="ytserver is up in container"; fi

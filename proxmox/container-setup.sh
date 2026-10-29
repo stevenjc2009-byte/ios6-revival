@@ -6,7 +6,7 @@
 # Everything here is defence in depth: a hardened service, no extra listeners,
 # IPv6 off, a second egress filter, root locked.
 set -Eeuo pipefail
-export DEBIAN_FRONTEND=noninteractive LC_ALL=C
+export DEBIAN_FRONTEND=noninteractive LC_ALL=C PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin  # pct exec passes no /usr/local/bin
 
 ENV_FILE=${1:-/root/ytserver-setup.env}
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)     # <staging>/proxmox
@@ -53,7 +53,7 @@ echo "${DENO_SHA}  $TMP/deno.zip" | sha256sum -c - >/dev/null || die "deno check
 unzip -qo "$TMP/deno.zip" deno -d "$TMP"
 install -m 0755 -o root -g root "$TMP/deno" /usr/local/bin/deno
 rm -rf "$TMP"
-deno --version | head -1
+/usr/local/bin/deno --version | sed -n 1p
 
 # ---------------------------------------------------------------- user + dirs
 say "creating service user ytserver (no login, no home)"
