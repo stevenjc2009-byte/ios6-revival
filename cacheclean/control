@@ -1,8 +1,8 @@
 Package: com.stevenjc.ios6revival.cacheclean
-Name: Clear Caches
-Version: 0.1.0
+Name: Clean Up System
+Version: 0.2.1
 Architecture: iphoneos-arm
-Description: Settings > Clear Caches has a Clear button that deletes Maps tiles, the pictures shown while apps open, and ad caches. The phone rebuilds them as it is used.
+Description: Settings > Clean Up System shows free space and has one Clean button that deletes crash logs, Maps tiles, the pictures shown while apps open, ad caches, saved App Store bags and installers kept from replaced apps, then says how much it cleaned.
 Maintainer: steve
 Author: steve
 Section: Tweaks

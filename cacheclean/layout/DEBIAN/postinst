@@ -1,0 +1,6 @@
+#!/bin/bash
+# Settings runs as mobile; setuid root lets its Clean button also clear root-owned crash logs and installers.
+# The tool takes no paths, only -n / -s, and skips any folder reached through a symlink.
+chown root:wheel /usr/bin/revcacheclean
+chmod 4755 /usr/bin/revcacheclean
+exit 0

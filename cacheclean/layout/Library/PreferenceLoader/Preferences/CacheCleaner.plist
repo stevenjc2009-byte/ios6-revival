@@ -8,12 +8,14 @@
 		<string>CacheCleaner</string>
 		<key>cell</key>
 		<string>PSLinkCell</string>
+		<key>icon</key>
+		<string>CacheCleaner.png</string>
 		<key>detail</key>
 		<string>RCCListController</string>
 		<key>isController</key>
 		<true/>
 		<key>label</key>
-		<string>Clear Caches</string>
+		<string>Clean Up System</string>
 	</dict>
 </dict>
 </plist>

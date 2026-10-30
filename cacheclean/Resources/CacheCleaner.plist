@@ -3,22 +3,34 @@
 <plist version="1.0">
 <dict>
 	<key>title</key>
-	<string>Clear Caches</string>
+	<string>Clean Up System</string>
 	<key>items</key>
 	<array>
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>label</key>
+			<string>Free Space</string>
+			<key>get</key>
+			<string>freeSpace:</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>Deletes Maps tiles, the pictures shown while apps open, and ad caches. The phone rebuilds them as you use it; Maps reloads tiles when you next look at a place.</string>
+			<string>Clean deletes files the phone does not need: crash logs, Maps tiles, the pictures shown while apps open, ad caches, saved App Store data and installers kept from replaced apps. Your apps, photos, music, messages and game saves are not touched. Maps reloads tiles when you next look at a place.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>label</key>
-			<string>Clear</string>
+			<string>Clean</string>
 			<key>action</key>
-			<string>clearCaches:</string>
+			<string>clean:</string>
 		</dict>
 	</array>
 </dict>

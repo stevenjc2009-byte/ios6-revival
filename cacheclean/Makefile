@@ -1,4 +1,4 @@
-# ios6-revival Clear Caches: a Settings pane with a Clear button, plus the revcacheclean tool. Build in WSL: see build.sh
+# ios6-revival Clean Up System: a Settings pane with a Clean button, plus the revcacheclean tool. Build in WSL: see build.sh
 ARCHS = armv7
 TARGET = iphone:clang:9.3:6.0
 THEOS_PLATFORM_DEB_COMPRESSION_TYPE = gzip
