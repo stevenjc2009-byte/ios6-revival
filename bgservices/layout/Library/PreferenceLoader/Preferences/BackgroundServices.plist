@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>entry</key>
+	<dict>
+		<key>cell</key>
+		<string>PSLinkCell</string>
+		<key>icon</key>
+		<string>BackgroundServices.png</string>
+		<key>label</key>
+		<string>Background Services</string>
+	</dict>
+	<key>title</key>
+	<string>Background Services</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>On: the service runs as normal. Off: it is stopped and stays off after a restart. The change takes a couple of seconds.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Sina Weibo sharing. Only used with a Weibo account.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Weibo</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.bgservices</string>
+			<key>key</key>
+			<string>com.apple.weibod</string>
+			<key>default</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Tweeting from Photos, Safari and Notification Centre.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Twitter</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.bgservices</string>
+			<key>key</key>
+			<string>com.apple.twitterd</string>
+			<key>default</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Facebook sharing and the Share buttons' social posts.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Facebook and Sharing</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.bgservices</string>
+			<key>key</key>
+			<string>com.apple.sociald</string>
+			<key>default</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Game Center sign-in, scores and achievements.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Game Center</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.bgservices</string>
+			<key>key</key>
+			<string>com.apple.gamed</string>
+			<key>default</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Collects usage counts for Apple's Diagnostics &amp; Usage.</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>label</key>
+			<string>Usage Statistics</string>
+			<key>defaults</key>
+			<string>com.stevenjc.ios6revival.bgservices</string>
+			<key>key</key>
+			<string>com.apple.aggregated</string>
+			<key>default</key>
+			<true/>
+		</dict>
+	</array>
+</dict>
+</plist>

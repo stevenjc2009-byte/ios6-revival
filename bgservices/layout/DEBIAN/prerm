@@ -1,0 +1,4 @@
+#!/bin/bash
+# Stop following the switches. Services stay as they were last set.
+launchctl unload /Library/LaunchDaemons/com.stevenjc.ios6revival.bgservices.plist 2>/dev/null
+exit 0

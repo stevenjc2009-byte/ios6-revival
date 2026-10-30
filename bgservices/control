@@ -1,0 +1,9 @@
+Package: com.stevenjc.ios6revival.bgservices
+Name: Background Services
+Version: 0.1.0
+Architecture: iphoneos-arm
+Description: Settings > Background Services has a switch for each Apple background service that can be turned off (Twitter, Weibo, Facebook sharing, Game Center, usage statistics). Off stops it, and it stays off after a restart.
+Maintainer: steve
+Author: steve
+Section: Tweaks
+Depends: preferenceloader

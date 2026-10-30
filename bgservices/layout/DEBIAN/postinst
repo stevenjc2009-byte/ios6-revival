@@ -1,0 +1,7 @@
+#!/bin/bash
+# Save each service's current state as its switch (nothing changes on install), then follow the switches.
+# launchd only watches a file that exists, which init makes sure of.
+/usr/bin/revbgservices init
+launchctl unload /Library/LaunchDaemons/com.stevenjc.ios6revival.bgservices.plist 2>/dev/null
+launchctl load /Library/LaunchDaemons/com.stevenjc.ios6revival.bgservices.plist 2>/dev/null
+exit 0
