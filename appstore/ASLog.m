@@ -101,6 +101,22 @@ BOOL ASIsBagURL(NSURL *url) {
     return [[url lastPathComponent] caseInsensitiveCompare:@"bag.xml"] == NSOrderedSame;
 }
 
+// Deletes all but the newest AS_BAG_KEEP saved bags (by modification time), so the folder stays small.
+static void ASPruneBags(void) {
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSMutableArray *bags = [NSMutableArray array];
+    for (NSString *name in [fm contentsOfDirectoryAtPath:AS_CAPTURE_DIR error:NULL]) {
+        if (![name hasSuffix:@"-bag.xml"]) continue;
+        NSString *path = [AS_CAPTURE_DIR stringByAppendingPathComponent:name];
+        NSDate *date = [[fm attributesOfItemAtPath:path error:NULL] fileModificationDate];
+        if (date) [bags addObject:[NSDictionary dictionaryWithObjectsAndKeys:path, @"path", date, @"date", nil]];
+    }
+    if ([bags count] <= AS_BAG_KEEP) return;
+    [bags sortUsingDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"date" ascending:YES]]];
+    for (NSUInteger i = 0; i < [bags count] - AS_BAG_KEEP; i++)
+        [fm removeItemAtPath:[[bags objectAtIndex:i] objectForKey:@"path"] error:NULL];
+}
+
 NSString *ASSaveBag(NSData *body, NSURL *url) {
     NSFileManager *fm = [NSFileManager defaultManager];
     if (![fm fileExistsAtPath:AS_CAPTURE_DIR]) {
@@ -113,5 +129,6 @@ NSString *ASSaveBag(NSData *body, NSURL *url) {
     NSString *path = [AS_CAPTURE_DIR stringByAppendingPathComponent:name];
     if (![body writeToFile:path atomically:NO]) return @"(write failed)";
     chmod([path fileSystemRepresentation], 0666);
+    ASPruneBags();
     return name;
 }

@@ -5,6 +5,7 @@
 #define AS_LOG_PATH    AS_DIR @"/appstore-log.txt"
 #define AS_CAPTURE_DIR AS_DIR @"/appstore-capture"
 #define AS_LOG_CAP     (1024 * 1024)   // bytes; past this the log is emptied and restarted
+#define AS_BAG_KEEP    5               // saved bags kept in AS_CAPTURE_DIR; older ones are deleted
 
 // One line: "<time> <process>[pid] <tag> <text>".
 void ASLog(NSString *tag, NSString *fmt, ...) NS_FORMAT_FUNCTION(2, 3);
@@ -19,5 +20,5 @@ NSString *ASErrorText(NSError *err);
 NSString *ASResponseText(NSURLResponse *resp);
 // True for .../bag.xml (the only bodies ever saved).
 BOOL ASIsBagURL(NSURL *url);
-// Writes a bag body to AS_CAPTURE_DIR; returns the file name.
+// Writes a bag body to AS_CAPTURE_DIR, keeping only the newest AS_BAG_KEEP; returns the file name.
 NSString *ASSaveBag(NSData *body, NSURL *url);
