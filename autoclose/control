@@ -1,6 +1,6 @@
 Package: com.stevenjc.ios6revival.autoclose
 Name: Auto Close Apps
-Version: 0.1.0
+Version: 0.1.1
 Architecture: iphoneos-arm
 Description: When you open an app and too many are running, closes all the others to free memory. Keeps the app you are on and the one playing audio. Limit in Settings.
 Maintainer: steve

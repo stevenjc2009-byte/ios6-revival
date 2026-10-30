@@ -6,6 +6,8 @@
 	<dict>
 		<key>cell</key>
 		<string>PSLinkCell</string>
+		<key>icon</key>
+		<string>PhoneLog.png</string>
 		<key>label</key>
 		<string>Phone Log</string>
 	</dict>

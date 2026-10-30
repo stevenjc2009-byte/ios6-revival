@@ -6,6 +6,8 @@
 	<dict>
 		<key>cell</key>
 		<string>PSLinkCell</string>
+		<key>icon</key>
+		<string>IOS6RevivalYT.png</string>
 		<key>label</key>
 		<string>YouTube Revival</string>
 	</dict>
