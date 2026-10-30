@@ -32,3 +32,7 @@ Install `autoclose/packages/com.stevenjc.ios6revival.autoclose_*.deb` with `dpkg
 ## Install Revival Notify and Phone Log
 
 Install `notify/packages/com.stevenjc.ios6revival.notify_*.deb` first, then `logwatch/packages/com.stevenjc.ios6revival.logwatch_*.deb`, with `dpkg -i`, then respring. Set the warning size and days in **Settings → Phone Log**. `revlogwatch status` shows the current size and deletion time. Removing Phone Log puts the original `/etc/syslog.conf` back.
+
+## Install Clear Caches
+
+Install `cacheclean/packages/com.stevenjc.ios6revival.cacheclean_*.deb` with `dpkg -i`. Open **Settings → Clear Caches** and tap **Clear** to delete Maps tiles, app launch pictures and ad caches; an alert shows how much was freed. `revcacheclean -n` lists the files without deleting them.

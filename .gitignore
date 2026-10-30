@@ -23,3 +23,5 @@ logwatch/.theos/
 logwatch/obj/
 appstore/.theos/
 appstore/obj/
+cacheclean/.theos/
+cacheclean/obj/

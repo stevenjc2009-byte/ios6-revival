@@ -1,0 +1,9 @@
+Package: com.stevenjc.ios6revival.cacheclean
+Name: Clear Caches
+Version: 0.1.0
+Architecture: iphoneos-arm
+Description: Settings > Clear Caches has a Clear button that deletes Maps tiles, the pictures shown while apps open, and ad caches. The phone rebuilds them as it is used.
+Maintainer: steve
+Author: steve
+Section: Tweaks
+Depends: preferenceloader
